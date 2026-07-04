@@ -1,0 +1,23 @@
+{
+  "name": "golden-retrieval-tester",
+  "version": "1.0.0",
+  "description": "Dashboard for comparing Golden Database retrieval API versions.",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c green,cyan \"npm run dev --workspace server\" \"npm run dev --workspace client\"",
+    "build": "npm run build --workspace server && npm run build --workspace client",
+    "start": "npm run start --workspace server",
+    "test": "npm run test --workspace server && npm run test --workspace client",
+    "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
