@@ -2,7 +2,6 @@
 
 Golden Retrieval Tester is a local React and Express dashboard for comparing Golden Database retrieval API versions. Agricultural experts can search by question, crop, and Indian state or Union Territory, inspect ranked matches, and compare old and new API responses side by side.
 
-Feedback controls are intentionally not included. Tester feedback is managed separately through Zoho Desk.
 
 ## Features
 
@@ -13,7 +12,6 @@ Feedback controls are intentionally not included. Tester feedback is managed sep
 - Complete state and Union Territory selector
 - Responsive interface
 
-Until `RETRIEVAL_API_V2_URL` is configured, New API requests fall back to the v1 endpoint.
 
 ## Requirements
 
@@ -51,17 +49,6 @@ Until `RETRIEVAL_API_V2_URL` is configured, New API requests fall back to the v1
 
 The web application runs at `http://localhost:5173` and the Express API at `http://localhost:4000`.
 
-## Environment variables
-
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `PORT` | Express server port | `4000` |
-| `CLIENT_ORIGIN` | Allowed browser origin | `http://localhost:5173` |
-| `RETRIEVAL_API_URL` | v1 Golden Database search endpoint | `http://localhost:8110/v1/gdb/search` |
-| `RETRIEVAL_API_V2_URL` | v2 search endpoint; falls back to v1 when empty | Empty |
-| `RETRIEVAL_API_TIMEOUT_MS` | Upstream request timeout | `90000` |
-
-Never commit `server/.env`. It is ignored by Git; only `.env.example` should be tracked.
 
 ## Commands
 
