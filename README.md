@@ -2,13 +2,16 @@
 
 Golden Retrieval Tester is a React dashboard for comparing Golden Database retrieval API versions. Agricultural experts can search by question, crop, and Indian state or Union Territory, inspect ranked matches, and compare old and new API responses side by side.
 
-The browser calls the FastAPI v1 and v2 routes directly. This repository does not contain a separate application server.
+The React client calls a small Express proxy, which forwards requests to the FastAPI v1 and v2 routes. Response normalization and all retrieval-specific display logic remain in the client so the temporary proxy can be removed later with minimal changes.
 
 ## Features
 
 - Old API, New API, and Comparison modes
 - Side-by-side comparison on desktop and stacked comparison on smaller screens
 - Selected answer shown before other retrieved questions
+- Combined, relevance, and similarity scores for New API candidates
+- Question-semantic, answer-semantic, keyword, and total candidate counters
+- Per-question retrieval sources with multi-source deduplication
 - Expandable answers, sources, classifications, and relevance reasons
 - Complete state and Union Territory selector
 - Independent v1 and v2 failure reporting
@@ -18,8 +21,7 @@ The browser calls the FastAPI v1 and v2 routes directly. This repository does no
 
 - Node.js 20 or newer
 - npm 10 or newer
-- Browser access to the Golden Database FastAPI service
-- CORS configured on FastAPI to allow the dashboard origin
+- Tailscale access to the Golden Database FastAPI service
 
 ## Local setup
 
@@ -29,19 +31,19 @@ The browser calls the FastAPI v1 and v2 routes directly. This repository does no
    npm install
    ```
 
-2. Copy the client environment example:
+2. Copy the server environment example:
 
    ```bash
-   cp client/.env.example client/.env.local
+   cp server/.env.example server/.env
    ```
 
    On Windows PowerShell:
 
    ```powershell
-   Copy-Item client/.env.example client/.env.local
+   Copy-Item server/.env.example server/.env
    ```
 
-3. Set the v1 and v2 FastAPI route URLs in `client/.env.local`.
+3. Set the v1 and v2 FastAPI route URLs in `server/.env`.
 
 4. Start the dashboard:
 
@@ -49,44 +51,51 @@ The browser calls the FastAPI v1 and v2 routes directly. This repository does no
    npm run dev
    ```
 
-The dashboard runs at `http://localhost:5173`.
+The dashboard runs at `http://localhost:5173`; its Express proxy runs at `http://localhost:4000`.
 
 ## Environment variables
 
 | Variable | Purpose | Example |
 | --- | --- | --- |
-| `VITE_RETRIEVAL_API_V1_URL` | Old API search route | `http://localhost:8110/v1/gdb/search` |
-| `VITE_RETRIEVAL_API_V2_URL` | New API search route | `http://localhost:8110/v2/gdb/search` |
-| `VITE_RETRIEVAL_API_TIMEOUT_MS` | Browser request timeout | `90000` |
+| `PORT` | Express proxy port | `4000` |
+| `CLIENT_ORIGIN` | Allowed browser origin | `http://localhost:5173` |
+| `RETRIEVAL_API_V1_URL` | Old API search route | `http://localhost:8110/v1/gdb/search` |
+| `RETRIEVAL_API_V2_URL` | New combined-search API route | `http://localhost:8110/v2/gdb/search-combined` |
+| `RETRIEVAL_API_TIMEOUT_MS` | Upstream request timeout | `90000` |
 
-Vite embeds these values in the browser build. Do not place passwords, API keys, or other secrets in `VITE_*` variables. Local `.env` files are ignored; only `.env.example` is tracked.
+Local `.env` files are ignored; only `.env.example` is tracked. Do not commit private Tailscale endpoints or credentials.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start the Vite development server |
-| `npm run typecheck` | Type-check the React application |
+| `npm run dev` | Start the Express proxy and Vite development server |
+| `npm run typecheck` | Type-check both workspaces |
 | `npm test` | Run automated tests |
-| `npm run build` | Create the production build in `client/dist` |
-| `npm start` | Preview the production build locally |
+| `npm run build` | Build both workspaces |
+| `npm start` | Start Express and serve the production client build |
 
 ## Project structure
 
 ```text
 .
 |-- client/               React and Vite application
-|   |-- .env.example      Public environment-variable template
 |   `-- src/
 |       |-- components/   Search and result UI
-|       |-- services/     Direct FastAPI calls and response normalization
+|       |-- services/     Proxy calls and response normalization
 |       `-- utils/        Display formatting helpers
+|-- server/               Temporary Express proxy
+|   |-- .env.example      Public environment-variable template
+|   `-- src/
+|       |-- routes/       Version-aware proxy route
+|       |-- services/     FastAPI request forwarding
+|       `-- validation/   Request validation
 |-- .github/workflows/    GitHub Actions verification
 `-- package.json          Root commands for the client workspace
 ```
 
 ## Production
 
-Run `npm run build`, then deploy the static `client/dist` directory to a static host.
+Run `npm run build`, set `NODE_ENV=production`, and run `npm start`. Express serves the generated `client/dist` application and proxies API requests.
 
-For a public HTTPS dashboard, the FastAPI service must also be publicly reachable over HTTPS and must allow the deployed dashboard origin through CORS. A browser will block mixed-content HTTP requests and cross-origin requests that the API has not authorized.
+For a future public deployment, the Express host must be able to reach FastAPI. Aryan can later expose FastAPI with appropriate HTTPS and CORS configuration and remove this proxy.

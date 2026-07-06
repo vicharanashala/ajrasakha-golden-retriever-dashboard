@@ -18,10 +18,14 @@ export interface SelectedMatch {
   question: string;
   answer: string;
   similarityScore: number | null;
-  retrievalSource: string;
+  combinedScore: number | null;
+  relevanceScore: number | null;
+  retrievalSources: string[];
   classification: string | null;
   answerFromClass: string | null;
   chosenForAnswer: boolean;
+  action: string | null;
+  llmParseOk: boolean | null;
   relevanceDecision: string | null;
   relevanceReason: string | null;
   sources: Source[];
@@ -31,10 +35,14 @@ export interface RelatedMatch {
   questionId: string | null;
   question: string;
   similarityScore: number | null;
+  combinedScore: number | null;
+  relevanceScore: number | null;
+  retrievalSources: string[];
   relevanceDecision: string | null;
   relevanceReason: string | null;
   classification: string | null;
   action: string | null;
+  llmParseOk: boolean | null;
 }
 
 export interface SearchResponse {
@@ -50,6 +58,7 @@ export interface SearchResponse {
     selectionRule: string | null;
     selectionMethod: string | null;
     relevanceFilterMode: string | null;
+    searchMode: string | null;
   };
   responseTimeMs: number;
   rawResponse: unknown;

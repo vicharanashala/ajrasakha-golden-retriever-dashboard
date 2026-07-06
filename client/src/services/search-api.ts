@@ -5,12 +5,7 @@ import type {
 } from '../types';
 import { normalizeSearchResponse } from './normalize-response';
 
-const API_URLS: Record<ApiVersion, string> = {
-  v1: (import.meta.env.VITE_RETRIEVAL_API_V1_URL ?? '').trim(),
-  v2: (import.meta.env.VITE_RETRIEVAL_API_V2_URL ?? '').trim(),
-};
-
-const parsedTimeout = Number(import.meta.env.VITE_RETRIEVAL_API_TIMEOUT_MS);
+const parsedTimeout = Number(import.meta.env.VITE_DASHBOARD_API_TIMEOUT_MS);
 const API_TIMEOUT_MS =
   Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 90_000;
 
@@ -18,7 +13,19 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const extractFieldErrors = (body: unknown): Record<string, string[]> => {
-  if (!isRecord(body) || !Array.isArray(body.detail)) return {};
+  if (!isRecord(body)) return {};
+
+  if (isRecord(body.fieldErrors)) {
+    return Object.fromEntries(
+      Object.entries(body.fieldErrors).filter(
+        (entry): entry is [string, string[]] =>
+          Array.isArray(entry[1]) &&
+          entry[1].every((message) => typeof message === 'string'),
+      ),
+    );
+  }
+
+  if (!Array.isArray(body.detail)) return {};
 
   return body.detail.reduce<Record<string, string[]>>((errors, detail) => {
     if (!isRecord(detail) || !Array.isArray(detail.loc)) return errors;
@@ -37,6 +44,9 @@ const extractFieldErrors = (body: unknown): Record<string, string[]> => {
   }, {});
 };
 
+const extractErrorMessage = (body: unknown): string | null =>
+  isRecord(body) && typeof body.message === 'string' ? body.message : null;
+
 export class SearchApiError extends Error {
   constructor(
     message: string,
@@ -52,11 +62,6 @@ export const submitSearch = async (
   version: ApiVersion = 'v1',
 ): Promise<SearchResponse> => {
   const apiLabel = version === 'v2' ? 'New API' : 'Old API';
-  const endpoint = API_URLS[version];
-
-  if (!endpoint) {
-    throw new SearchApiError(`${apiLabel} endpoint is not configured.`);
-  }
 
   let response: Response;
   const controller = new AbortController();
@@ -67,7 +72,7 @@ export const submitSearch = async (
   const startedAt = performance.now();
 
   try {
-    response = await fetch(endpoint, {
+    response = await fetch(`/api/search?version=${version}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -84,7 +89,7 @@ export const submitSearch = async (
     }
 
     throw new SearchApiError(
-      `${apiLabel} is unreachable from the browser. Confirm network access and API CORS settings.`,
+      'The local dashboard server is unavailable. Confirm that it is running and try again.',
     );
   } finally {
     globalThis.clearTimeout(timeoutId);
@@ -102,9 +107,10 @@ export const submitSearch = async (
   if (!response.ok) {
     const fieldErrors = extractFieldErrors(body);
     throw new SearchApiError(
-      response.status === 422
-        ? `${apiLabel} rejected the supplied search fields.`
-        : `${apiLabel} could not complete this search (HTTP ${response.status}).`,
+      extractErrorMessage(body) ??
+        (response.status === 400 || response.status === 422
+          ? `${apiLabel} rejected the supplied search fields.`
+          : `${apiLabel} could not complete this search (HTTP ${response.status}).`),
       fieldErrors,
     );
   }

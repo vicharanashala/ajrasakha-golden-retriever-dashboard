@@ -79,7 +79,7 @@ describe('normalizeSearchResponse', () => {
 
     expect(result.matchType).toBe('exact');
     expect(result.selectedMatch?.questionId).toBe('exact-id');
-    expect(result.selectedMatch?.retrievalSource).toBe('exact');
+    expect(result.selectedMatch?.retrievalSources).toEqual(['exact']);
   });
 
   it('handles a response without a selected result', () => {
@@ -106,5 +106,88 @@ describe('normalizeSearchResponse', () => {
     );
 
     expect(result.query).toBe('What causes pale tips on wheat leaves?');
+  });
+
+  it('normalizes combined-search scores, sources, and candidate metadata', () => {
+    const result = normalizeSearchResponse(
+      {
+        original_query: 'What causes pale tips on wheat leaves?',
+        refined_query: 'what causes pale tips on leaves?',
+        removed_entities: ['wheat', 'Punjab'],
+        keywords_extracted: ['pale tips', 'leaves'],
+        exact_match: {},
+        selected_match: {
+          question_id: 'selected-id',
+          similarity_score: 0.84,
+          combined_score: 0.91,
+          retrieval_source: 'question_semantic',
+          question: 'Selected combined question',
+          answer: 'Selected combined answer',
+        },
+        classification_audit: {
+          status: 'selected',
+          search_mode: 'v2_combined',
+          evaluations: [
+            {
+              question_id: 'selected-id',
+              similarity_score: 0.84,
+              combined_score: 0.91,
+              relevance_score: 1,
+              retrieval_source: 'question_semantic',
+              retrieved_question: 'Selected combined question',
+              action: 'selected',
+              llm_parse_ok: true,
+            },
+            {
+              question_id: 'alternative-id',
+              similarity_score: 0.9,
+              combined_score: 0.7,
+              relevance_score: 0.4,
+              retrieval_source: 'keyword',
+              retrieved_question: 'Alternative combined question',
+            },
+          ],
+        },
+        v2_metadata: {
+          keywords_extracted: ['pale tips', 'leaves'],
+          question_semantic_results: 5,
+          answer_semantic_results: 1,
+          keyword_results: 2,
+          total_candidates: 8,
+          retrieval_sources: {
+            'selected-id': [
+              'question_semantic',
+              'answer_semantic',
+              'keyword',
+              'question_semantic',
+            ],
+            'alternative-id': ['keyword'],
+          },
+        },
+      },
+      500,
+    );
+
+    expect(result.selectedMatch).toEqual(
+      expect.objectContaining({
+        combinedScore: 0.91,
+        relevanceScore: 1,
+        retrievalSources: [
+          'question_semantic',
+          'answer_semantic',
+          'keyword',
+        ],
+        action: 'selected',
+        llmParseOk: true,
+      }),
+    );
+    expect(result.relatedMatches[0]).toEqual(
+      expect.objectContaining({
+        combinedScore: 0.7,
+        relevanceScore: 0.4,
+        retrievalSources: ['keyword'],
+      }),
+    );
+    expect(result.audit.searchMode).toBe('v2_combined');
   });
 });
