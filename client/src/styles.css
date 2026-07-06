@@ -97,10 +97,11 @@ main {
   margin-bottom: 14px;
 }
 
-.mode-panel > span {
-  color: #445950;
-  font-size: 12px;
-  font-weight: 700;
+.mode-panel > h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  letter-spacing: -0.02em;
 }
 
 .mode-selector {
@@ -136,6 +137,29 @@ main {
   color: #fff;
   background: var(--green-900);
   box-shadow: 0 2px 7px rgba(23, 79, 61, 0.2);
+}
+
+.api-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 13px;
+  border: 1px solid #d8e5de;
+  border-radius: 9px;
+  color: #4d6158;
+  background: #f3f8f5;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.api-note svg {
+  flex: 0 0 auto;
+  color: var(--green-700);
+}
+
+.api-note strong {
+  color: var(--green-900);
 }
 
 .search-panel {
@@ -278,6 +302,52 @@ main {
   font-size: 13px;
 }
 
+.api-status-card {
+  min-height: 180px;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.api-status-card .api-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.api-status-card h2,
+.api-status-card p {
+  margin: 0;
+}
+
+.api-status-card h2 {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.api-status-card p {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.api-status-card--error {
+  border-color: #ebcaca;
+  background: #fffafa;
+}
+
+.api-status-card--error > svg {
+  color: #ad3f3f;
+}
+
 .error-banner {
   display: flex;
   align-items: center;
@@ -322,7 +392,7 @@ main {
 
 .results-heading h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: 22px;
   letter-spacing: -0.02em;
 }
 
@@ -368,6 +438,28 @@ main {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.results-subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 24px 0 12px;
+}
+
+.results-subheading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.results-subheading .result-count {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .retrieved-item {
@@ -478,6 +570,16 @@ main {
   white-space: pre-wrap;
 }
 
+.answered-by {
+  margin: 12px 0 18px !important;
+  color: #52665e;
+  font-size: 11px;
+}
+
+.answered-by strong {
+  color: #2c453c;
+}
+
 .unavailable-note {
   margin: 12px 0 0;
   color: #7a8983;
@@ -557,7 +659,9 @@ main {
     grid-template-columns: 1fr;
   }
 
-  .search-panel h1 {
+  .mode-panel > h2,
+  .search-panel h1,
+  .results-heading h2 {
     font-size: 19px;
   }
 

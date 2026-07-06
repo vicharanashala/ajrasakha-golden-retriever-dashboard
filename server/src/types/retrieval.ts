@@ -49,6 +49,9 @@ export interface ClassificationAudit {
 }
 
 export interface UpstreamSearchResponse {
+  original_query?: unknown;
+  refined_query?: unknown;
+  removed_entities?: unknown;
   rephrased_query?: unknown;
   crop?: unknown;
   state?: unknown;

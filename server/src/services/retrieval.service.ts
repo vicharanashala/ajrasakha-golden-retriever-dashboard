@@ -25,6 +25,13 @@ export const searchGoldenDatabase = async (
   const retrievalApiUrl =
     version === 'v2' ? config.retrievalApiV2Url : config.retrievalApiV1Url;
 
+  if (!retrievalApiUrl) {
+    throw new RetrievalServiceError(
+      `${version === 'v2' ? 'New' : 'Old'} API endpoint is not configured.`,
+      503,
+    );
+  }
+
   try {
     response = await fetch(retrievalApiUrl, {
       method: 'POST',

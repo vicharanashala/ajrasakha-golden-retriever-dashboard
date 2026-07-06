@@ -91,4 +91,19 @@ describe('normalizeSearchResponse', () => {
     expect(result.selectedMatch).toBeNull();
     expect(result.relatedMatches).toEqual([]);
   });
+
+  it('uses the original query returned by the v2 API', () => {
+    const result = normalizeSearchResponse(
+      {
+        original_query: 'What causes pale tips on wheat leaves?',
+        refined_query: 'what causes pale tips on leaves?',
+        removed_entities: ['wheat', 'Uttar Pradesh'],
+        exact_match: {},
+        selected_match: {},
+      },
+      30,
+    );
+
+    expect(result.query).toBe('What causes pale tips on wheat leaves?');
+  });
 });

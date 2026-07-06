@@ -105,7 +105,11 @@ export const normalizeSearchResponse = (
     : null;
 
   return {
-    query: asString(upstream.rephrased_query) ?? '',
+    query:
+      asString(upstream.original_query) ??
+      asString(upstream.rephrased_query) ??
+      asString(upstream.refined_query) ??
+      '',
     crop: asString(upstream.crop) ?? '',
     state: asString(upstream.state) ?? '',
     matchType: exactMatch ? 'exact' : semanticMatch ? 'semantic' : 'none',

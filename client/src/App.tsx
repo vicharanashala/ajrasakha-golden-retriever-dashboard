@@ -3,8 +3,8 @@ import {
   AlertTriangle,
   Columns2,
   History,
+  Info,
   Leaf,
-  RotateCcw,
   Sparkles,
 } from 'lucide-react';
 import { LoadingState } from './components/LoadingState';
@@ -21,7 +21,9 @@ import type {
 interface ResultSet {
   apiLabel: 'Old API' | 'New API';
   version: ApiVersion;
-  result: SearchResponse;
+  result?: SearchResponse;
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
 }
 
 const modes: Array<{
@@ -34,65 +36,78 @@ const modes: Array<{
   { value: 'comparison', label: 'Comparison', icon: Columns2 },
 ];
 
+const executeSearch = async (
+  payload: SearchPayload,
+  version: ApiVersion,
+  apiLabel: ResultSet['apiLabel'],
+): Promise<ResultSet> => {
+  try {
+    return {
+      apiLabel,
+      version,
+      result: await submitSearch(payload, version),
+    };
+  } catch (error) {
+    if (error instanceof SearchApiError) {
+      return {
+        apiLabel,
+        version,
+        error: error.message,
+        fieldErrors: error.fieldErrors,
+      };
+    }
+
+    return {
+      apiLabel,
+      version,
+      error: 'An unexpected error occurred while searching.',
+    };
+  }
+};
+
 function App() {
   const [mode, setMode] = useState<TesterMode>('old');
   const [resultSets, setResultSets] = useState<ResultSet[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const [hasSearched, setHasSearched] = useState(false);
 
   const changeMode = (nextMode: TesterMode) => {
     setMode(nextMode);
     setResultSets([]);
-    setError('');
     setFieldErrors({});
-    setHasSearched(false);
   };
 
   const runSearch = async (payload: SearchPayload) => {
     setLoading(true);
-    setError('');
     setFieldErrors({});
     setResultSets([]);
 
-    try {
-      if (mode === 'comparison') {
-        const [oldResult, newResult] = await Promise.all([
-          submitSearch(payload, 'v1'),
-          submitSearch(payload, 'v2'),
-        ]);
-        setResultSets([
-          { apiLabel: 'Old API', version: 'v1', result: oldResult },
-          { apiLabel: 'New API', version: 'v2', result: newResult },
-        ]);
-      } else {
-        const version: ApiVersion = mode === 'new' ? 'v2' : 'v1';
-        setResultSets([
-          {
-            apiLabel: mode === 'new' ? 'New API' : 'Old API',
-            version,
-            result: await submitSearch(payload, version),
-          },
-        ]);
-      }
-      setHasSearched(true);
-    } catch (searchError) {
-      setHasSearched(true);
-      if (searchError instanceof SearchApiError) {
-        setError(searchError.message);
-        setFieldErrors(searchError.fieldErrors);
-      } else {
-        setError('An unexpected error occurred while searching.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    const attempts =
+      mode === 'comparison'
+        ? await Promise.all([
+            executeSearch(payload, 'v1', 'Old API'),
+            executeSearch(payload, 'v2', 'New API'),
+          ])
+        : [
+            await executeSearch(
+              payload,
+              mode === 'new' ? 'v2' : 'v1',
+              mode === 'new' ? 'New API' : 'Old API',
+            ),
+          ];
 
-  const visibleResultSets = resultSets.filter(
-    ({ result }) => result.selectedMatch || result.relatedMatches.length,
-  );
+    setResultSets(attempts);
+    setFieldErrors(
+      attempts.reduce<Record<string, string[]>>(
+        (allErrors, attempt) => ({
+          ...allErrors,
+          ...attempt.fieldErrors,
+        }),
+        {},
+      ),
+    );
+    setLoading(false);
+  };
 
   return (
     <div className="app-shell">
@@ -107,7 +122,7 @@ function App() {
 
       <main className={mode === 'comparison' ? 'main--comparison' : undefined}>
         <section className="mode-panel" aria-labelledby="mode-heading">
-          <span id="mode-heading">Choose retrieval mode</span>
+          <h2 id="mode-heading">Choose retrieval mode</h2>
           <div className="mode-selector">
             {modes.map((item) => {
               const Icon = item.icon;
@@ -127,36 +142,61 @@ function App() {
           </div>
         </section>
 
+        {mode !== 'old' && (
+          <aside className="api-note" role="note">
+            <Info size={17} aria-hidden="true" />
+            <span>
+              <strong>Note:</strong> QA pairs in the New API should appear if
+              they were created before 4 June.
+            </span>
+          </aside>
+        )}
+
         <SearchForm
           loading={loading}
           fieldErrors={fieldErrors}
           onSearch={runSearch}
         />
 
-        {error && (
-          <div className="error-banner" role="alert">
-            <AlertTriangle size={20} />
-            <span>{error}</span>
-            <button type="button" onClick={() => setError('')}>
-              <RotateCcw size={15} /> Dismiss
-            </button>
-          </div>
-        )}
-
         {loading ? (
           <LoadingState />
-        ) : visibleResultSets.length ? (
+        ) : resultSets.length ? (
           <div className={mode === 'comparison' ? 'comparison-results' : ''}>
-            {visibleResultSets.map(({ apiLabel, version, result }) => (
-              <ResultView
-                key={`${version}-${result.query}-${result.responseTimeMs}`}
-                apiLabel={apiLabel}
-                result={result}
-              />
-            ))}
+            {resultSets.map(({ apiLabel, version, result, error }) => {
+              if (error) {
+                return (
+                  <section
+                    className="api-status-card api-status-card--error"
+                    key={version}
+                    role="alert"
+                  >
+                    <span className="api-badge">{apiLabel}</span>
+                    <AlertTriangle size={25} aria-hidden="true" />
+                    <h2>{apiLabel} failed</h2>
+                    <p>{error}</p>
+                  </section>
+                );
+              }
+
+              if (!result?.selectedMatch && !result?.relatedMatches.length) {
+                return (
+                  <section className="api-status-card" key={version}>
+                    <span className="api-badge">{apiLabel}</span>
+                    <h2>No results</h2>
+                    <p>{apiLabel} did not return any retrieved questions.</p>
+                  </section>
+                );
+              }
+
+              return (
+                <ResultView
+                  key={`${version}-${result.query}-${result.responseTimeMs}`}
+                  apiLabel={apiLabel}
+                  result={result}
+                />
+              );
+            })}
           </div>
-        ) : hasSearched && !error ? (
-          <div className="no-results">No retrieved questions were returned.</div>
         ) : null}
       </main>
     </div>

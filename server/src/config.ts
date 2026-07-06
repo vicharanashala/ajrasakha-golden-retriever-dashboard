@@ -9,8 +9,7 @@ const retrievalApiV1Url =
   process.env.RETRIEVAL_API_URL ??
   'http://localhost:8110/v1/gdb/search';
 
-const retrievalApiV2Url =
-  process.env.RETRIEVAL_API_V2_URL?.trim() || retrievalApiV1Url;
+const retrievalApiV2Url = process.env.RETRIEVAL_API_V2_URL?.trim() ?? '';
 
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
