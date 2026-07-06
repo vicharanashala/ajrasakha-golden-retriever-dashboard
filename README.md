@@ -1,23 +1,25 @@
 # Golden Retrieval Tester
 
-Golden Retrieval Tester is a local React and Express dashboard for comparing Golden Database retrieval API versions. Agricultural experts can search by question, crop, and Indian state or Union Territory, inspect ranked matches, and compare old and new API responses side by side.
+Golden Retrieval Tester is a React dashboard for comparing Golden Database retrieval API versions. Agricultural experts can search by question, crop, and Indian state or Union Territory, inspect ranked matches, and compare old and new API responses side by side.
 
+The browser calls the FastAPI v1 and v2 routes directly. This repository does not contain a separate application server.
 
 ## Features
 
 - Old API, New API, and Comparison modes
 - Side-by-side comparison on desktop and stacked comparison on smaller screens
-- Five ranked questions with similarity scores
+- Selected answer shown before other retrieved questions
 - Expandable answers, sources, classifications, and relevance reasons
 - Complete state and Union Territory selector
+- Independent v1 and v2 failure reporting
 - Responsive interface
-
 
 ## Requirements
 
 - Node.js 20 or newer
 - npm 10 or newer
-- Access to the Golden Database retrieval API
+- Browser access to the Golden Database FastAPI service
+- CORS configured on FastAPI to allow the dashboard origin
 
 ## Local setup
 
@@ -27,19 +29,19 @@ Golden Retrieval Tester is a local React and Express dashboard for comparing Gol
    npm install
    ```
 
-2. Copy the server environment example:
+2. Copy the client environment example:
 
    ```bash
-   cp server/.env.example server/.env
+   cp client/.env.example client/.env.local
    ```
 
    On Windows PowerShell:
 
    ```powershell
-   Copy-Item server/.env.example server/.env
+   Copy-Item client/.env.example client/.env.local
    ```
 
-3. Update `server/.env` with the API endpoints.
+3. Set the v1 and v2 FastAPI route URLs in `client/.env.local`.
 
 4. Start the dashboard:
 
@@ -47,45 +49,44 @@ Golden Retrieval Tester is a local React and Express dashboard for comparing Gol
    npm run dev
    ```
 
-The web application runs at `http://localhost:5173` and the Express API at `http://localhost:4000`.
+The dashboard runs at `http://localhost:5173`.
 
+## Environment variables
+
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `VITE_RETRIEVAL_API_V1_URL` | Old API search route | `http://localhost:8110/v1/gdb/search` |
+| `VITE_RETRIEVAL_API_V2_URL` | New API search route | `http://localhost:8110/v2/gdb/search` |
+| `VITE_RETRIEVAL_API_TIMEOUT_MS` | Browser request timeout | `90000` |
+
+Vite embeds these values in the browser build. Do not place passwords, API keys, or other secrets in `VITE_*` variables. Local `.env` files are ignored; only `.env.example` is tracked.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start the client and server in development mode |
-| `npm run typecheck` | Type-check both workspaces |
+| `npm run dev` | Start the Vite development server |
+| `npm run typecheck` | Type-check the React application |
 | `npm test` | Run automated tests |
-| `npm run build` | Build the client and server |
-| `npm start` | Serve the production build |
+| `npm run build` | Create the production build in `client/dist` |
+| `npm start` | Preview the production build locally |
 
 ## Project structure
 
 ```text
 .
 |-- client/               React and Vite application
+|   |-- .env.example      Public environment-variable template
 |   `-- src/
-|       |-- components/
-|       |-- services/
-|       `-- utils/
-|-- server/               Express API proxy
-|   `-- src/
-|       |-- routes/
-|       |-- services/
-|       |-- types/
-|       `-- validation/
+|       |-- components/   Search and result UI
+|       |-- services/     Direct FastAPI calls and response normalization
+|       `-- utils/        Display formatting helpers
 |-- .github/workflows/    GitHub Actions verification
-`-- package.json          Workspace scripts
+`-- package.json          Root commands for the client workspace
 ```
 
 ## Production
 
-Build both workspaces and start the Express server:
+Run `npm run build`, then deploy the static `client/dist` directory to a static host.
 
-```bash
-npm run build
-npm start
-```
-
-Set `NODE_ENV=production` in the deployment environment. Express will serve the generated client build.
+For a public HTTPS dashboard, the FastAPI service must also be publicly reachable over HTTPS and must allow the deployed dashboard origin through CORS. A browser will block mixed-content HTTP requests and cross-origin requests that the API has not authorized.

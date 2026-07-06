@@ -54,8 +54,3 @@ export interface SearchResponse {
   responseTimeMs: number;
   rawResponse: unknown;
 }
-
-export interface ApiErrorBody {
-  message?: string;
-  fieldErrors?: Record<string, string[]>;
-}

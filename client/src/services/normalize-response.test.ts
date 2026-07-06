@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeSearchResponse } from './normalize-response.js';
+import { normalizeSearchResponse } from './normalize-response';
 
 describe('normalizeSearchResponse', () => {
   it('selects a semantic match and excludes it from alternatives', () => {
@@ -13,7 +13,8 @@ describe('normalizeSearchResponse', () => {
           question_id: 'selected-id',
           similarity_score: 0.9107769727706909,
           retrieval_source: 'rag',
-          question: 'The tips of wheat leaves are turning yellow. What should I do?',
+          question:
+            'The tips of wheat leaves are turning yellow. What should I do?',
           answer: 'Selected guidance',
           details: [
             {

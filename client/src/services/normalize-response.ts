@@ -1,13 +1,46 @@
 import type {
-  AuditEvaluation,
-  ClassificationAudit,
-  NormalizedMatch,
-  NormalizedSearchResponse,
   RelatedMatch,
-  SourceDetail,
-  UpstreamMatch,
-  UpstreamSearchResponse,
-} from '../types/retrieval.js';
+  SearchResponse,
+  SelectedMatch,
+} from '../types';
+
+interface SourceDetail {
+  source_name?: unknown;
+  source_link?: unknown;
+  author_name?: unknown;
+}
+
+interface UpstreamMatch {
+  question_id?: unknown;
+  similarity_score?: unknown;
+  retrieval_source?: unknown;
+  question?: unknown;
+  answer?: unknown;
+  details?: unknown;
+  gemma_class?: unknown;
+  chosen_for_answer?: unknown;
+  answer_from_class?: unknown;
+}
+
+interface AuditEvaluation {
+  question_id?: unknown;
+  similarity_score?: unknown;
+  retrieved_question?: unknown;
+  relevance_decision?: unknown;
+  relevance_reason?: unknown;
+  classification?: unknown;
+  reason?: unknown;
+  action?: unknown;
+}
+
+interface ClassificationAudit {
+  status?: unknown;
+  model?: unknown;
+  relevance_filter_mode?: unknown;
+  evaluations?: unknown;
+  selection_rule?: unknown;
+  selection_method?: unknown;
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -21,7 +54,7 @@ const asNumber = (value: unknown): number | null =>
 const normalizeMatch = (
   value: unknown,
   fallbackSource: string,
-): NormalizedMatch | null => {
+): SelectedMatch | null => {
   if (!isRecord(value) || Object.keys(value).length === 0) return null;
 
   const match = value as UpstreamMatch;
@@ -58,7 +91,9 @@ const normalizeRelatedMatches = (
 
   return (value as AuditEvaluation[])
     .filter(isRecord)
-    .filter((evaluation) => asString(evaluation.question_id) !== selectedQuestionId)
+    .filter(
+      (evaluation) => asString(evaluation.question_id) !== selectedQuestionId,
+    )
     .map((evaluation) => ({
       questionId: asString(evaluation.question_id),
       question:
@@ -78,9 +113,9 @@ const normalizeRelatedMatches = (
 };
 
 export const normalizeSearchResponse = (
-  upstream: UpstreamSearchResponse,
+  upstream: Record<string, unknown>,
   responseTimeMs: number,
-): NormalizedSearchResponse => {
+): SearchResponse => {
   const exactMatch = normalizeMatch(upstream.exact_match, 'exact');
   const semanticMatch = normalizeMatch(upstream.selected_match, 'rag');
   const baseSelectedMatch = exactMatch ?? semanticMatch;
