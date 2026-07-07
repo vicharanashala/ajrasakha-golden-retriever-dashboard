@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, type SetStateAction, useState } from 'react';
 import { MapPin, Search, Sprout } from 'lucide-react';
 import type { SearchPayload } from '../types';
 
@@ -48,28 +48,31 @@ const unionTerritories = [
 ];
 
 interface SearchFormProps {
+  payload: SearchPayload;
   loading: boolean;
   fieldErrors: Record<string, string[]>;
+  onPayloadChange: (payload: SetStateAction<SearchPayload>) => void;
   onSearch: (payload: SearchPayload) => void;
 }
 
 export function SearchForm({
+  payload,
   loading,
   fieldErrors,
+  onPayloadChange,
   onSearch,
 }: SearchFormProps) {
-  const [question, setQuestion] = useState('');
-  const [crop, setCrop] = useState('');
-  const [state, setState] = useState('');
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const errors: Record<string, string> = {};
-    if (question.trim().length < 3) errors.question = 'Enter a valid question.';
-    if (!state) errors.state = 'Select a state or Union Territory.';
-    if (crop.trim().length < 2) errors.crop = 'Enter a crop name.';
+    if (payload.rephrased_query.trim().length < 3) {
+      errors.question = 'Enter a valid question.';
+    }
+    if (!payload.state) errors.state = 'Select a state or Union Territory.';
+    if (payload.crop.trim().length < 2) errors.crop = 'Enter a crop name.';
 
     if (Object.keys(errors).length) {
       setLocalErrors(errors);
@@ -78,9 +81,9 @@ export function SearchForm({
 
     setLocalErrors({});
     onSearch({
-      rephrased_query: question.trim(),
-      crop: crop.trim(),
-      state,
+      rephrased_query: payload.rephrased_query.trim(),
+      crop: payload.crop.trim(),
+      state: payload.state,
     });
   };
 
@@ -91,9 +94,12 @@ export function SearchForm({
         <label className="form-field form-field--question">
           <span>Question</span>
           <textarea
-            value={question}
+            value={payload.rephrased_query}
             onChange={(event) => {
-              setQuestion(event.target.value);
+              onPayloadChange((current) => ({
+                ...current,
+                rephrased_query: event.target.value,
+              }));
               setLocalErrors((current) => ({ ...current, question: '' }));
             }}
             placeholder="Type your question here"
@@ -112,9 +118,12 @@ export function SearchForm({
               <MapPin size={15} /> State / Union Territory
             </span>
             <select
-              value={state}
+              value={payload.state}
               onChange={(event) => {
-                setState(event.target.value);
+                onPayloadChange((current) => ({
+                  ...current,
+                  state: event.target.value,
+                }));
                 setLocalErrors((current) => ({ ...current, state: '' }));
               }}
               aria-invalid={Boolean(localErrors.state || fieldErrors.state)}
@@ -145,9 +154,12 @@ export function SearchForm({
               <Sprout size={15} /> Crop
             </span>
             <input
-              value={crop}
+              value={payload.crop}
               onChange={(event) => {
-                setCrop(event.target.value);
+                onPayloadChange((current) => ({
+                  ...current,
+                  crop: event.target.value,
+                }));
                 setLocalErrors((current) => ({ ...current, crop: '' }));
               }}
               placeholder="Type crop name here"

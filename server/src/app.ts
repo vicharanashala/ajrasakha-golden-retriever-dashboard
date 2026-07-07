@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
+import { feedbackRouter } from './routes/feedback.routes.js';
 import { searchRouter } from './routes/search.routes.js';
 
 export const app = express();
@@ -11,13 +12,14 @@ export const app = express();
 app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({ origin: config.clientOrigin }));
-app.use(express.json({ limit: '32kb' }));
+app.use(express.json({ limit: '512kb' }));
 
 app.get('/api/health', (_request, response) => {
   response.json({ status: 'ok' });
 });
 
 app.use('/api/search', searchRouter);
+app.use('/api/feedback', feedbackRouter);
 
 const clientBuildPath = path.resolve(import.meta.dirname, '../../client/dist');
 

@@ -19,4 +19,13 @@ export const config = {
     process.env.RETRIEVAL_API_TIMEOUT_MS,
     90_000,
   ),
+  zoho: {
+    accountsUrl: process.env.ZOHO_ACCOUNTS_URL ?? 'https://accounts.zoho.com',
+    sheetApiBase: process.env.ZOHO_SHEET_API_BASE ?? 'https://sheet.zoho.com',
+    clientId: process.env.ZOHO_CLIENT_ID ?? '',
+    clientSecret: process.env.ZOHO_CLIENT_SECRET ?? '',
+    refreshToken: process.env.ZOHO_REFRESH_TOKEN ?? '',
+    sheetResourceId: process.env.ZOHO_SHEET_RESOURCE_ID ?? '',
+    worksheetName: process.env.ZOHO_SHEET_WORKSHEET_NAME ?? '',
+  },
 };

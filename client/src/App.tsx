@@ -7,6 +7,8 @@ import {
   Leaf,
   Sparkles,
 } from 'lucide-react';
+import { FeedbackPanel } from './components/FeedbackPanel';
+import { LoginPanel } from './components/LoginPanel';
 import { LoadingState } from './components/LoadingState';
 import { ResultView } from './components/ResultView';
 import { SearchForm } from './components/SearchForm';
@@ -66,21 +68,43 @@ const executeSearch = async (
 };
 
 function App() {
+  const [testerName, setTesterName] = useState(
+    () => window.sessionStorage.getItem('golden-retrieval-tester') ?? '',
+  );
+  const [searchPayload, setSearchPayload] = useState<SearchPayload>({
+    rephrased_query: '',
+    crop: '',
+    state: '',
+  });
+  const [lastSearchPayload, setLastSearchPayload] =
+    useState<SearchPayload | null>(null);
   const [mode, setMode] = useState<TesterMode>('old');
   const [resultSets, setResultSets] = useState<ResultSet[]>([]);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
+  const login = (nextTesterName: string) => {
+    window.sessionStorage.setItem('golden-retrieval-tester', nextTesterName);
+    setTesterName(nextTesterName);
+  };
+
+  const logout = () => {
+    window.sessionStorage.removeItem('golden-retrieval-tester');
+    setTesterName('');
+  };
+
   const changeMode = (nextMode: TesterMode) => {
     setMode(nextMode);
     setResultSets([]);
     setFieldErrors({});
+    setLastSearchPayload(null);
   };
 
   const runSearch = async (payload: SearchPayload) => {
     setLoading(true);
     setFieldErrors({});
     setResultSets([]);
+    setLastSearchPayload(payload);
 
     const attempts =
       mode === 'comparison'
@@ -109,6 +133,10 @@ function App() {
     setLoading(false);
   };
 
+  if (!testerName) {
+    return <LoginPanel onLogin={login} />;
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -117,6 +145,10 @@ function App() {
             <Leaf size={21} />
           </span>
           <span className="brand__name">Golden Retrieval Tester</span>
+          <span className="tester-chip">Tester: {testerName}</span>
+          <button className="logout-button" type="button" onClick={logout}>
+            Log out
+          </button>
         </div>
       </header>
 
@@ -152,11 +184,29 @@ function App() {
           </aside>
         )}
 
-        <SearchForm
-          loading={loading}
-          fieldErrors={fieldErrors}
-          onSearch={runSearch}
-        />
+        <div
+          className={
+            lastSearchPayload
+              ? 'search-feedback-grid'
+              : 'search-feedback-grid is-search-only'
+          }
+        >
+          <SearchForm
+            payload={searchPayload}
+            loading={loading}
+            fieldErrors={fieldErrors}
+            onPayloadChange={setSearchPayload}
+            onSearch={runSearch}
+          />
+
+          {lastSearchPayload && (
+            <FeedbackPanel
+              testerName={testerName}
+              searchPayload={lastSearchPayload}
+              resultSets={resultSets}
+            />
+          )}
+        </div>
 
         {loading ? (
           <LoadingState />

@@ -9,10 +9,11 @@ The React client calls a small Express proxy, which forwards requests to the Fas
 - Old API, New API, and Comparison modes
 - Side-by-side comparison on desktop and stacked comparison on smaller screens
 - Selected answer shown before other retrieved questions
-- Combined, relevance, and similarity scores for New API candidates
-- Question-semantic, answer-semantic, keyword, and total candidate counters
+- Similarity score and retrieval source display for retrieved candidates
 - Per-question retrieval sources with multi-source deduplication
 - Expandable answers, sources, classifications, and relevance reasons
+- Tester login gate for capturing evaluator name
+- Issue reporting panel that can append structured feedback rows to Zoho Sheet
 - Complete state and Union Territory selector
 - Independent v1 and v2 failure reporting
 - Responsive interface
@@ -45,7 +46,17 @@ The React client calls a small Express proxy, which forwards requests to the Fas
 
 3. Set the v1 and v2 FastAPI route URLs in `server/.env`.
 
-4. Start the dashboard:
+4. If feedback logging is required, configure the Zoho Sheet variables in `server/.env`.
+
+5. Optionally set a shared dashboard password for local builds in `client/.env.local`:
+
+   ```bash
+   VITE_DASHBOARD_PASSWORD=your-shared-password
+   ```
+
+   If this is not set, the development fallback password is `golden-tester`.
+
+6. Start the dashboard:
 
    ```bash
    npm run dev
@@ -62,8 +73,47 @@ The dashboard runs at `http://localhost:5173`; its Express proxy runs at `http:/
 | `RETRIEVAL_API_V1_URL` | Old API search route | `http://localhost:8110/v1/gdb/search` |
 | `RETRIEVAL_API_V2_URL` | New combined-search API route | `http://localhost:8110/v2/gdb/search-combined` |
 | `RETRIEVAL_API_TIMEOUT_MS` | Upstream request timeout | `90000` |
+| `ZOHO_ACCOUNTS_URL` | Zoho accounts OAuth base URL for the account data center | `https://accounts.zoho.com` |
+| `ZOHO_SHEET_API_BASE` | Zoho Sheet API base URL for the account data center | `https://sheet.zoho.com` |
+| `ZOHO_CLIENT_ID` | Zoho OAuth client ID |  |
+| `ZOHO_CLIENT_SECRET` | Zoho OAuth client secret |  |
+| `ZOHO_REFRESH_TOKEN` | Zoho OAuth refresh token with Sheet update scope |  |
+| `ZOHO_SHEET_RESOURCE_ID` | Zoho Sheet workbook/resource ID |  |
+| `ZOHO_SHEET_WORKSHEET_NAME` | Worksheet tab that receives feedback rows | `Feedback` |
 
-Local `.env` files are ignored; only `.env.example` is tracked. Do not commit private Tailscale endpoints or credentials.
+Client-side optional variable:
+
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `VITE_DASHBOARD_PASSWORD` | Shared dashboard password used by the lightweight login gate | `change-me` |
+
+
+## Zoho Sheet feedback setup
+
+Create a Zoho Sheet worksheet with this header row:
+
+```text
+timestamp
+tester_name
+input_question
+state
+crop
+retrieved_question_api_v1
+retrieved_question_api_v2
+retrieved_answer_with_sources_v1
+retrieved_answer_with_sources_v2
+question_id_v1
+question_id_v2
+similarity_score
+retrieval_source
+all_other_fetched_questions_v1
+all_other_fetched_questions_v2
+issue_faced
+```
+
+Then create a Zoho OAuth app in the Zoho API Console, grant Sheet Data API update access, generate a refresh token, and put the client ID, client secret, refresh token, sheet resource ID, and worksheet name in `server/.env`.
+
+Feedback is submitted through `POST /api/feedback`; credentials are used only by the Express server and are never exposed in the browser.
 
 ## Commands
 
@@ -87,9 +137,9 @@ Local `.env` files are ignored; only `.env.example` is tracked. Do not commit pr
 |-- server/               Temporary Express proxy
 |   |-- .env.example      Public environment-variable template
 |   `-- src/
-|       |-- routes/       Version-aware proxy route
-|       |-- services/     FastAPI request forwarding
-|       `-- validation/   Request validation
+|       |-- routes/       Search proxy and feedback routes
+|       |-- services/     FastAPI forwarding and Zoho Sheet logging
+|       `-- validation/   Search and feedback request validation
 |-- .github/workflows/    GitHub Actions verification
 `-- package.json          Root commands for the client workspace
 ```
@@ -97,5 +147,3 @@ Local `.env` files are ignored; only `.env.example` is tracked. Do not commit pr
 ## Production
 
 Run `npm run build`, set `NODE_ENV=production`, and run `npm start`. Express serves the generated `client/dist` application and proxies API requests.
-
-For a future public deployment, the Express host must be able to reach FastAPI. Aryan can later expose FastAPI with appropriate HTTPS and CORS configuration and remove this proxy.
