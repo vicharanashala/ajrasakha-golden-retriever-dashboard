@@ -1,0 +1,23 @@
+services:
+  golden_retriver_dashboard:
+    image: mraryankohli/golden-retriver-dashboard:latest
+    container_name: golden_retriver_dashboard
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      CLIENT_ORIGIN: "http://0.0.0.0:4000"
+
+      RETRIEVAL_API_V1_URL: "http://100.100.108.44:8110/v1/gdb/search"
+      RETRIEVAL_API_V2_URL: "http://100.100.108.43:8110/v2/gdb/search-combined"
+      RETRIEVAL_API_TIMEOUT_MS: "90000"
+
+      ZOHO_ACCOUNTS_URL: "https://accounts.zoho.in"
+      ZOHO_SHEET_API_BASE: "https://sheet.zoho.in"
+      ZOHO_CLIENT_ID: "1000.WVHY7X0M4FL1YPNMI2E9WJZW29H0DS"
+      ZOHO_CLIENT_SECRET: "6813ba77a473fc2f09552078e07b49392cd46fef8b"
+      ZOHO_REFRESH_TOKEN: "1000.08d2cb82af5bb82266b41e54bc463d95.f7c3f163e890b673e2e69dbc2f0c22fc"
+      ZOHO_SHEET_RESOURCE_ID: "f9naz834d104053624c9788e321d8ee0b2f05"
+      ZOHO_SHEET_WORKSHEET_NAME: "Feedback"

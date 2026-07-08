@@ -10,8 +10,14 @@ import { searchRouter } from './routes/search.routes.js';
 export const app = express();
 
 app.disable('x-powered-by');
-app.use(helmet());
-app.use(cors({ origin: config.clientOrigin }));
+app.use(helmet({
+  hsts: false,
+  contentSecurityPolicy: false,
+}));
+app.use(cors({ 
+  origin: true,
+  credentials: true,
+}));
 app.use(express.json({ limit: '512kb' }));
 
 app.get('/api/health', (_request, response) => {
@@ -21,7 +27,7 @@ app.get('/api/health', (_request, response) => {
 app.use('/api/search', searchRouter);
 app.use('/api/feedback', feedbackRouter);
 
-const clientBuildPath = path.resolve(import.meta.dirname, '../../client/dist');
+const clientBuildPath = '/app/client/dist';
 
 if (config.nodeEnv === 'production' && existsSync(clientBuildPath)) {
   app.use(express.static(clientBuildPath));
