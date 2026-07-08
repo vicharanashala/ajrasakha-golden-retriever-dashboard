@@ -1,14 +1,22 @@
-name: Build and Push Docker Image
-
+name: Build Golden Retriever Dashboard Image
 on:
-  workflow_dispatch:
+  workflow_dispatch:    
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  DOCKER_IMAGE: golden-retriver-dashboard
 
 jobs:
-  build-and-push:
+  build:
+    name: Build & Push Image
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
@@ -20,14 +28,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build & Push Image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
+          push: true
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            mraryankohli/golden-retriver-dashboard:latest
-            mraryankohli/golden-retriver-dashboard:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
