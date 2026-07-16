@@ -1,38 +1,19 @@
-name: CI/CD - Cloud Run (Staging & Production)
+name: Build and Push Docker Image
 
 on:
   workflow_dispatch:
-    inputs:
-      deploy_production:
-        description: "Deploy to production?"
-        required: true
-        default: "false"
-        type: choice
-        options:
-          - "false"
-          - "true"
 
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 env:
-  NODE_VERSION: '20'
   DOCKER_IMAGE: ajrasakha-golden-retriever
-  GCP_REGION: asia-south1
-  GCP_STAGING_SERVICE: ajrasakha-staging
-  GCP_PRODUCTION_SERVICE: ajrasakha-production
 
 jobs:
   build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    environment:
-      name: build
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
-      sha_tag: ${{ env.SHA_TAG }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,77 +57,3 @@ jobs:
             VITE_DASHBOARD_PASSWORD=${{ secrets.DASHBOARD_PASSWORD }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy_staging:
-    name: Deploy to Cloud Run (Staging)
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_production == 'false'
-    needs: [build]
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-    steps:
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: '${{ secrets.GCP_GH_SA_KEY }}'
-
-      - name: Deploy to Cloud Run (Staging)
-        uses: google-github-actions/deploy-cloudrun@v2
-        timeout-minutes: 10
-        with:
-          service: ${{ env.GCP_STAGING_SERVICE }}
-          region: ${{ env.GCP_REGION }}
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:staging
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          env_vars: |
-            NODE_ENV=staging
-            CLIENT_ORIGIN=${{ secrets.STAGING_CLIENT_ORIGIN }}
-            ZOHO_SHEET_ID=${{ secrets.ZOHO_SHEET_ID }}
-            ZOHO_CLIENT_ID=${{ secrets.ZOHO_CLIENT_ID }}
-            ZOHO_CLIENT_SECRET=${{ secrets.ZOHO_CLIENT_SECRET }}
-            ZOHO_REFRESH_TOKEN=${{ secrets.ZOHO_REFRESH_TOKEN }}
-            RETRIEVAL_TOP_K=${{ secrets.RETRIEVAL_TOP_K }}
-            EMBEDDING_MODEL=${{ secrets.EMBEDDING_MODEL }}
-            LLM_MODEL=${{ secrets.LLM_MODEL }}
-            LLM_BASE_URL=${{ secrets.LLM_BASE_URL }}
-            LLM_API_KEY=${{ secrets.LLM_API_KEY }}
-            TAILSCALE_AUTHKEY=${{ secrets.TAILSCALE_AUTHKEY }}
-            TS_HOSTNAME=ajrasakha-staging
-          flags: --allow-unauthenticated --port=4000 --min-instances=1 --max-instances=10 --concurrency=1000 --memory=1Gi --cpu=1
-
-  deploy_production:
-    name: Deploy to Cloud Run (Production)
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_production == 'true'
-    needs: [build]
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-    steps:
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: '${{ secrets.GCP_GH_SA_KEY }}'
-
-      - name: Deploy to Cloud Run (Production)
-        uses: google-github-actions/deploy-cloudrun@v2
-        timeout-minutes: 10
-        with:
-          service: ${{ env.GCP_PRODUCTION_SERVICE }}
-          region: ${{ env.GCP_REGION }}
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          env_vars: |
-            NODE_ENV=production
-            CLIENT_ORIGIN=${{ secrets.PRODUCTION_CLIENT_ORIGIN }}
-            ZOHO_SHEET_ID=${{ secrets.ZOHO_SHEET_ID }}
-            ZOHO_CLIENT_ID=${{ secrets.ZOHO_CLIENT_ID }}
-            ZOHO_CLIENT_SECRET=${{ secrets.ZOHO_CLIENT_SECRET }}
-            ZOHO_REFRESH_TOKEN=${{ secrets.ZOHO_REFRESH_TOKEN }}
-            RETRIEVAL_TOP_K=${{ secrets.RETRIEVAL_TOP_K }}
-            EMBEDDING_MODEL=${{ secrets.EMBEDDING_MODEL }}
-            LLM_MODEL=${{ secrets.LLM_MODEL }}
-            LLM_BASE_URL=${{ secrets.LLM_BASE_URL }}
-            LLM_API_KEY=${{ secrets.LLM_API_KEY }}
-            TAILSCALE_AUTHKEY=${{ secrets.TAILSCALE_AUTHKEY }}
-            TS_HOSTNAME=ajrasakha-production
-          flags: --allow-unauthenticated --port=4000 --min-instances=1 --max-instances=20 --concurrency=1000 --memory=2Gi --cpu=2
