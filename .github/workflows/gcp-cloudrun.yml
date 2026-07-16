@@ -78,7 +78,7 @@ jobs:
 
   deploy_staging:
     name: Deploy to Cloud Run (Staging)
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_production == 'false'
     needs: [build]
     runs-on: ubuntu-latest
     environment:
@@ -99,7 +99,6 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           env_vars: |
             NODE_ENV=staging
-            PORT=4000
             CLIENT_ORIGIN=${{ secrets.STAGING_CLIENT_ORIGIN }}
             ZOHO_SHEET_ID=${{ secrets.ZOHO_SHEET_ID }}
             ZOHO_CLIENT_ID=${{ secrets.ZOHO_CLIENT_ID }}
@@ -112,7 +111,7 @@ jobs:
             LLM_API_KEY=${{ secrets.LLM_API_KEY }}
             TAILSCALE_AUTHKEY=${{ secrets.TAILSCALE_AUTHKEY }}
             TS_HOSTNAME=ajrasakha-staging
-          flags: --allow-unauthenticated --min-instances=1 --max-instances=10 --concurrency=1000 --memory=1Gi --cpu=1
+          flags: --allow-unauthenticated --port=4000 --min-instances=1 --max-instances=10 --concurrency=1000 --memory=1Gi --cpu=1
 
   deploy_production:
     name: Deploy to Cloud Run (Production)
@@ -137,7 +136,6 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           env_vars: |
             NODE_ENV=production
-            PORT=4000
             CLIENT_ORIGIN=${{ secrets.PRODUCTION_CLIENT_ORIGIN }}
             ZOHO_SHEET_ID=${{ secrets.ZOHO_SHEET_ID }}
             ZOHO_CLIENT_ID=${{ secrets.ZOHO_CLIENT_ID }}
@@ -150,4 +148,4 @@ jobs:
             LLM_API_KEY=${{ secrets.LLM_API_KEY }}
             TAILSCALE_AUTHKEY=${{ secrets.TAILSCALE_AUTHKEY }}
             TS_HOSTNAME=ajrasakha-production
-          flags: --allow-unauthenticated --min-instances=1 --max-instances=20 --concurrency=1000 --memory=2Gi --cpu=2
+          flags: --allow-unauthenticated --port=4000 --min-instances=1 --max-instances=20 --concurrency=1000 --memory=2Gi --cpu=2
