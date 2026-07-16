@@ -1,38 +1,85 @@
 #!/command/with-contenv sh
 set -x
 
-# Create directories just in case at runtime
 mkdir -p /var/run/tailscale /var/lib/tailscale
 
-echo "=== STARTING TAILSCALE DAEMON ==="
-tailscaled \
-  --tun=userspace-networking \
-  --socks5-server=127.0.0.1:1055 \
-  --outbound-http-proxy-listen=127.0.0.1:1056 &
-DAEMON_PID=$!
+MAX_RETRIES=5
+RETRY_COUNT=0
 
-echo "=== WAITING FOR SOCKET FILE ==="
-WAIT_COUNT=0
-until [ -S /var/run/tailscale/tailscaled.sock ]; do
-    WAIT_COUNT=$((WAIT_COUNT + 1))
-    echo "Waiting for tailscaled.sock... ($WAIT_COUNTs)"
-    if [ $WAIT_COUNT -gt 15 ]; then
-        echo "ERROR: tailscaled.sock was not created within 15 seconds!"
+start_tailscaled() {
+    echo "=== STARTING TAILSCALE DAEMON (attempt $((RETRY_COUNT + 1))) ==="
+    tailscaled \
+        --tun=userspace-networking \
+        --socks5-server=127.0.0.1:1055 \
+        --outbound-http-proxy-listen=127.0.0.1:1056 &
+    DAEMON_PID=$!
+    echo "tailscaled started with PID: $DAEMON_PID"
+}
+
+wait_for_socket() {
+    echo "=== WAITING FOR SOCKET FILE ==="
+    WAIT_COUNT=0
+    until [ -S /var/run/tailscale/tailscaled.sock ]; do
+        WAIT_COUNT=$((WAIT_COUNT + 1))
+        echo "Waiting for tailscaled.sock... ($WAIT_COUNTs)"
+        if [ $WAIT_COUNT -gt 15 ]; then
+            echo "ERROR: tailscaled.sock was not created within 15 seconds!"
+            return 1
+        fi
+        sleep 1
+    done
+    echo "Socket file ready"
+    return 0
+}
+
+authenticate() {
+    echo "=== RUNNING AUTHENTICATION ==="
+    tailscale up \
+        --reset \
+        --authkey=${TAILSCALE_AUTHKEY} \
+        --hostname=${TS_HOSTNAME:-ajrasakha-retriever} \
+        --accept-routes 2>&1
+    UP_EXIT_CODE=$?
+    echo "=== TAILSCALE UP FINISHED (EXIT CODE: $UP_EXIT_CODE) ==="
+    tailscale status 2>&1
+    return $UP_EXIT_CODE
+}
+
+# Main loop - restart tailscaled if it dies
+while true; do
+    if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+        echo "ERROR: Max retries ($MAX_RETRIES) reached, giving up"
         exit 1
     fi
-    sleep 1
+
+    start_tailscaled
+    
+    if ! wait_for_socket; then
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        echo "Socket wait failed, retry $RETRY_COUNT/$MAX_RETRIES"
+        continue
+    fi
+    
+    if ! authenticate; then
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        echo "Authentication failed, retry $RETRY_COUNT/$MAX_RETRIES"
+        kill $DAEMON_PID 2>/dev/null || true
+        sleep 5
+        continue
+    fi
+    
+    # Authentication succeeded, now monitor tailscaled
+    echo "=== TAILSCALE RUNNING, MONITORING ==="
+    RETRY_COUNT=0
+    
+    # Wait for tailscaled to exit (it should keep running)
+    # The key insight: we DON'T call 'wait' here because that would exit when tailscaled dies
+    # Instead, we poll and restart if needed
+    while kill -0 $DAEMON_PID 2>/dev/null; do
+        sleep 30
+    done
+    
+    echo "WARNING: tailscaled exited unexpectedly, will restart..."
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    sleep 2
 done
-
-echo "=== DAEMON IS READY, RUNNING AUTHENTICATION ==="
-tailscale up \
-  --reset \
-  --authkey=${TAILSCALE_AUTHKEY} \
-  --hostname=${TS_HOSTNAME:-ajrasakha-retriever} \
-  --accept-routes 2>&1
-UP_EXIT_CODE=$?
-echo "=== TAILSCALE UP FINISHED (EXIT CODE: $UP_EXIT_CODE) ==="
-
-# Print actual status details post-login
-tailscale status 2>&1
-
-wait $DAEMON_PID
