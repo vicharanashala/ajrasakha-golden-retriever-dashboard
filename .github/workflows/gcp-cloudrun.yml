@@ -87,10 +87,11 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: '${{ secrets.GCP_GH_SA_KEY }}'
 
       - name: Deploy to Cloud Run (Staging)
-        uses: google-github-actions/deploy-cloudrun@v1
+        uses: google-github-actions/deploy-cloudrun@v2
+        timeout-minutes: 10
         with:
           service: ${{ env.GCP_STAGING_SERVICE }}
           region: ${{ env.GCP_REGION }}
@@ -124,10 +125,11 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: '${{ secrets.GCP_GH_SA_KEY }}'
 
       - name: Deploy to Cloud Run (Production)
-        uses: google-github-actions/deploy-cloudrun@v1
+        uses: google-github-actions/deploy-cloudrun@v2
+        timeout-minutes: 10
         with:
           service: ${{ env.GCP_PRODUCTION_SERVICE }}
           region: ${{ env.GCP_REGION }}
