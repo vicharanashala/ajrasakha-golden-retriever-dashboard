@@ -3,6 +3,9 @@ FROM node:20-alpine AS client-builder
 
 WORKDIR /app/client
 
+# Accept VITE_DASHBOARD_PASSWORD as build arg
+ARG VITE_DASHBOARD_PASSWORD
+
 # Copy package files first
 COPY client/package.json .
 
@@ -12,8 +15,8 @@ RUN npm install
 # Copy client source
 COPY client/ ./
 
-# Build client
-RUN npm run build
+# Build client with VITE_DASHBOARD_PASSWORD
+RUN VITE_DASHBOARD_PASSWORD=${VITE_DASHBOARD_PASSWORD} npm run build
 
 # Stage 2: Build the server
 FROM node:20-alpine AS server-builder

@@ -73,6 +73,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
           build-args: |
             NODE_ENV=staging
+            VITE_DASHBOARD_PASSWORD=${{ secrets.DASHBOARD_PASSWORD }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
