@@ -19,6 +19,9 @@ export const config = {
     process.env.RETRIEVAL_API_TIMEOUT_MS,
     90_000,
   ),
+  // SOCKS5 proxy exposed by tailscaled (default 127.0.0.1:1055). Empty/unset
+  // disables the proxy and falls back to direct fetch.
+  langgraphSocksUrl: process.env.LANGGRAPH_SOCKS_URL ?? '',
   zoho: {
     accountsUrl: process.env.ZOHO_ACCOUNTS_URL ?? 'https://accounts.zoho.com',
     sheetApiBase: process.env.ZOHO_SHEET_API_BASE ?? 'https://sheet.zoho.com',
