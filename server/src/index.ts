@@ -1,5 +1,5 @@
 import { SocksProxyAgent } from 'socks-proxy-agent';
-import * as nodeFetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import { app } from './app.js';
 import { config } from './config.js';
 
