@@ -1,18 +1,17 @@
 import { Router } from 'express';
 import { ZodError } from 'zod';
 import {
-  appendRetrievalFeedbackRow,
+  appendAnswerShortenerFeedbackRow,
   GoogleSheetsError,
 } from '../services/google-sheets.service.js';
-import { feedbackRequestSchema } from '../validation/feedback.schema.js';
+import { answerShortenerFeedbackRequestSchema } from '../validation/answer-shortener-feedback.schema.js';
 
-export const feedbackRouter = Router();
+export const answerShortenerFeedbackRouter = Router();
 
-feedbackRouter.post('/', async (request, response, next) => {
+answerShortenerFeedbackRouter.post('/', async (request, response, next) => {
   try {
-    const feedback = feedbackRequestSchema.parse(request.body);
-    await appendRetrievalFeedbackRow(feedback);
-
+    const feedback = answerShortenerFeedbackRequestSchema.parse(request.body);
+    await appendAnswerShortenerFeedbackRow(feedback);
     response.status(201).json({ message: 'Feedback submitted.' });
   } catch (error) {
     if (error instanceof ZodError) {

@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
+import { answerShortenerFeedbackRouter } from './routes/answer-shortener-feedback.routes.js';
+import { answerShortenerRouter } from './routes/answer-shortener.routes.js';
 import { feedbackRouter } from './routes/feedback.routes.js';
 import { searchRouter } from './routes/search.routes.js';
 
@@ -26,6 +28,8 @@ app.get('/api/health', (_request, response) => {
 
 app.use('/api/search', searchRouter);
 app.use('/api/feedback', feedbackRouter);
+app.use('/api/answer-shortener', answerShortenerRouter);
+app.use('/api/answer-shortener-feedback', answerShortenerFeedbackRouter);
 
 const clientBuildPath = '/app/client/dist';
 

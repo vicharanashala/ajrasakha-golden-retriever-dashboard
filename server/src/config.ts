@@ -19,6 +19,18 @@ export const config = {
     process.env.RETRIEVAL_API_TIMEOUT_MS,
     90_000,
   ),
+  answerShortenerApiUrl:
+    process.env.ANSWER_SHORTENER_API_URL ??
+    'http://100.100.108.43:8112/v1/answers/shorten',
+  answerShortenerApiKey: process.env.ANSWER_SHORTENER_API_KEY ?? '',
+  googleSheets: {
+    credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? '',
+    spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID ?? '',
+    retrievalWorksheetName:
+      process.env.GOOGLE_RETRIEVAL_WORKSHEET_NAME ?? '',
+    answerShortenerWorksheetName:
+      process.env.GOOGLE_ANSWER_SHORTENER_WORKSHEET_NAME ?? '',
+  },
   zoho: {
     accountsUrl: process.env.ZOHO_ACCOUNTS_URL ?? 'https://accounts.zoho.com',
     sheetApiBase: process.env.ZOHO_SHEET_API_BASE ?? 'https://sheet.zoho.com',

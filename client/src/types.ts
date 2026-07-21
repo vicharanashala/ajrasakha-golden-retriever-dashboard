@@ -7,6 +7,25 @@ export interface SearchPayload {
 export type ApiVersion = 'v1' | 'v2';
 export type TesterMode = 'old' | 'new' | 'comparison';
 
+export interface AnswerShortenerPayload {
+  originalQuery: string;
+  expectedCharacters: number | null;
+  originalAnswer: string;
+}
+
+export interface AnswerShortenerResponse {
+  fullAnswer: string;
+  shortAnswer: string;
+  originalCharacterCount: number;
+  expectedCharacterCount: number;
+  minimumCharacterCount: number;
+  maximumCharacterCount: number;
+  actualCharacterCount: number;
+  footerCharacterCount: number;
+  tolerance: number;
+  withinTolerance: boolean;
+}
+
 export interface Source {
   name: string;
   url: string | null;
