@@ -1,5 +1,9 @@
 import { type FormEvent, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Send } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, Send } from 'lucide-react';
+import {
+  downloadFeedbackCsv,
+  FeedbackDownloadError,
+} from '../services/feedback-download-api';
 import { submitFeedback, type FeedbackSubmission } from '../services/feedback-api';
 import type { ApiVersion, SearchPayload, SearchResponse, Source } from '../types';
 import { formatPercentage, humanizeToken } from '../utils/format';
@@ -109,6 +113,7 @@ export function FeedbackPanel({
   const [pendingSubmission, setPendingSubmission] =
     useState<FeedbackSubmission | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<SubmitStatus>(null);
 
   const feedbackPayload = useMemo<FeedbackSubmission>(() => {
@@ -187,6 +192,26 @@ export function FeedbackPanel({
     }
   };
 
+  const downloadMyFeedback = async () => {
+    setDownloading(true);
+    setStatus(null);
+
+    try {
+      await downloadFeedbackCsv('/api/feedback/download', testerName);
+      setStatus({ type: 'success', message: 'Your retrieval feedback was downloaded.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message:
+          error instanceof FeedbackDownloadError
+            ? error.message
+            : 'Feedback could not be downloaded.',
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <>
       <section className="feedback-panel" aria-labelledby="feedback-heading">
@@ -195,6 +220,15 @@ export function FeedbackPanel({
           The report will include the current question, state, crop, and the
           retrieved outputs from the selected API mode.
         </p>
+        <button
+          className="feedback-download"
+          type="button"
+          disabled={downloading}
+          onClick={downloadMyFeedback}
+        >
+          <Download size={15} />
+          {downloading ? 'Preparing download...' : 'Download my feedback'}
+        </button>
 
         <form onSubmit={handleSubmit}>
           <label className="form-field">

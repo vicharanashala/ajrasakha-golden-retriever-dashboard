@@ -79,6 +79,84 @@ const appendRow = async (worksheetName: string, values: Array<string | number>) 
   }
 };
 
+const escapeCsvValue = (value: unknown) => {
+  const text = String(value ?? '');
+  const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safeText.replaceAll('"', '""')}"`;
+};
+
+const createDownloadFilename = (prefix: string, testerName: string) => {
+  const safeTesterName = testerName
+    .trim()
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLocaleLowerCase();
+  const date = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(new Date())
+    .replaceAll('/', '-');
+
+  return `${prefix}-feedback-${safeTesterName || 'tester'}-${date}.csv`;
+};
+
+const downloadTesterFeedback = async (
+  worksheetName: string,
+  filenamePrefix: string,
+  testerName: string,
+) => {
+  requiredGoogleSheetsConfig();
+
+  const auth = new google.auth.GoogleAuth({
+    keyFile: config.googleSheets.credentialsPath,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: config.googleSheets.spreadsheetId,
+      range: toSheetRange(worksheetName),
+    });
+    const [headers = [], ...rows] = response.data.values ?? [];
+    const testerNameColumn = headers.findIndex(
+      (header) => header === 'tester_name',
+    );
+
+    if (testerNameColumn === -1) {
+      throw new GoogleSheetsError(
+        `The ${worksheetName} tab is missing a tester_name header.`,
+        502,
+      );
+    }
+
+    const normalizedTesterName = testerName.trim().toLocaleLowerCase();
+    const matchingRows = rows.filter(
+      (row) =>
+        String(row[testerNameColumn] ?? '').trim().toLocaleLowerCase() ===
+        normalizedTesterName,
+    );
+    const csv = [headers, ...matchingRows]
+      .map((row) => row.map(escapeCsvValue).join(','))
+      .join('\r\n');
+
+    return {
+      filename: createDownloadFilename(filenamePrefix, testerName),
+      csv: `${csv}\r\n`,
+    };
+  } catch (error) {
+    if (error instanceof GoogleSheetsError) throw error;
+
+    throw new GoogleSheetsError(
+      'Google Sheets could not retrieve feedback. Confirm the service account has access to the spreadsheet.',
+      502,
+    );
+  }
+};
+
 export const appendRetrievalFeedbackRow = async (feedback: FeedbackRequest) =>
   appendRow(config.googleSheets.retrievalWorksheetName, [
     getIstTimestamp(),
@@ -118,3 +196,17 @@ export const appendAnswerShortenerFeedbackRow = async (
     feedback.tolerance,
     feedback.issue_faced,
   ]);
+
+export const downloadRetrievalFeedback = (testerName: string) =>
+  downloadTesterFeedback(
+    config.googleSheets.retrievalWorksheetName,
+    'retrieval',
+    testerName,
+  );
+
+export const downloadAnswerShortenerFeedback = (testerName: string) =>
+  downloadTesterFeedback(
+    config.googleSheets.answerShortenerWorksheetName,
+    'answer-shortener',
+    testerName,
+  );

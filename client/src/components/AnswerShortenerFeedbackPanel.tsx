@@ -1,11 +1,15 @@
 import { type FormEvent, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Send } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, Send } from 'lucide-react';
 import {
   AnswerShortenerFeedbackApiError,
   createAnswerShortenerFeedbackSubmission,
   submitAnswerShortenerFeedback,
   type AnswerShortenerFeedbackSubmission,
 } from '../services/answer-shortener-feedback-api';
+import {
+  downloadFeedbackCsv,
+  FeedbackDownloadError,
+} from '../services/feedback-download-api';
 import type { AnswerShortenerPayload, AnswerShortenerResponse } from '../types';
 
 interface AnswerShortenerFeedbackPanelProps {
@@ -23,6 +27,7 @@ export function AnswerShortenerFeedbackPanel({
   const [pendingSubmission, setPendingSubmission] =
     useState<AnswerShortenerFeedbackSubmission | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<
     { type: 'success' | 'error'; message: string } | null
   >(null);
@@ -83,6 +88,32 @@ export function AnswerShortenerFeedbackPanel({
     }
   };
 
+  const downloadMyFeedback = async () => {
+    setDownloading(true);
+    setStatus(null);
+
+    try {
+      await downloadFeedbackCsv(
+        '/api/answer-shortener-feedback/download',
+        testerName,
+      );
+      setStatus({
+        type: 'success',
+        message: 'Your Answer Shortener feedback was downloaded.',
+      });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message:
+          error instanceof FeedbackDownloadError
+            ? error.message
+            : 'Feedback could not be downloaded.',
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <>
       <section
@@ -94,6 +125,15 @@ export function AnswerShortenerFeedbackPanel({
           The report will include this test request and all Answer Shortener
           response values.
         </p>
+        <button
+          className="feedback-download"
+          type="button"
+          disabled={downloading}
+          onClick={downloadMyFeedback}
+        >
+          <Download size={15} />
+          {downloading ? 'Preparing download...' : 'Download my feedback'}
+        </button>
 
         <form onSubmit={handleSubmit}>
           <label className="form-field">

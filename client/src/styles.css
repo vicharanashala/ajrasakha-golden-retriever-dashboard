@@ -537,6 +537,7 @@ main {
 }
 
 .feedback-submit,
+.feedback-download,
 .primary-button,
 .secondary-button {
   height: 42px;
@@ -556,6 +557,20 @@ main {
   border: 0;
   color: #fff;
   background: var(--green-900);
+}
+
+.feedback-download {
+  width: 100%;
+  margin: -6px 0 14px;
+  border: 1px solid #b8cec2;
+  color: var(--green-700);
+  background: #f7fbf8;
+}
+
+.feedback-download:hover:not(:disabled) {
+  border-color: #8eafa0;
+  color: var(--green-900);
+  background: #edf6f0;
 }
 
 .feedback-submit {
