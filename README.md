@@ -1,6 +1,6 @@
 # Golden Retrieval Tester
 
-Golden Retrieval Tester is a React dashboard for comparing Golden Database retrieval API versions. Agricultural experts can search by question, crop, and Indian state or Union Territory, inspect ranked matches, and compare old and new API responses side by side.
+Golden Retrieval Tester is a React dashboard for comparing Golden Database retrieval API versions and testing the Answer Shortener API. Agricultural experts can search by question, crop, and Indian state or Union Territory, inspect ranked matches, and compare old and new API responses side by side.
 
 The React client calls a small Express proxy, which forwards requests to the FastAPI v1 and v2 routes. Response normalization and all retrieval-specific display logic remain in the client so the temporary proxy can be removed later with minimal changes.
 
@@ -13,9 +13,10 @@ The React client calls a small Express proxy, which forwards requests to the Fas
 - Per-question retrieval sources with multi-source deduplication
 - Expandable answers, sources, classifications, and relevance reasons
 - Tester login gate for capturing evaluator name
-- Issue reporting panel that can append structured feedback rows to Zoho Sheet
+- Retrieval and Answer Shortener feedback stored in separate Google Spreadsheet tabs
 - Complete state and Union Territory selector
 - Independent v1 and v2 failure reporting
+- Answer Shortener API test page with full/short answer, character counts, and tolerance review
 - Responsive interface
 
 ## Requirements
@@ -44,9 +45,9 @@ The React client calls a small Express proxy, which forwards requests to the Fas
    Copy-Item server/.env.example server/.env
    ```
 
-3. Set the v1 and v2 FastAPI route URLs in `server/.env`.
+3. Set the v1 and v2 retrieval FastAPI route URLs in `server/.env`. The Answer Shortener URL defaults to `http://100.100.108.43:8112/v1/answers/shorten`; if its `X-API-Key` protection is enabled, set `ANSWER_SHORTENER_API_KEY` too.
 
-4. If feedback logging is required, configure the Zoho Sheet variables in `server/.env`.
+4. If feedback logging is required, configure the Google Sheets variables in `server/.env`.
 
 5. Optionally set a shared dashboard password for local builds in `client/.env.local`:
 
@@ -73,13 +74,12 @@ The dashboard runs at `http://localhost:5173`; its Express proxy runs at `http:/
 | `RETRIEVAL_API_V1_URL` | Old API search route | `http://localhost:8110/v1/gdb/search` |
 | `RETRIEVAL_API_V2_URL` | New combined-search API route | `http://localhost:8110/v2/gdb/search-combined` |
 | `RETRIEVAL_API_TIMEOUT_MS` | Upstream request timeout | `90000` |
-| `ZOHO_ACCOUNTS_URL` | Zoho accounts OAuth base URL for the account data center | `https://accounts.zoho.com` |
-| `ZOHO_SHEET_API_BASE` | Zoho Sheet API base URL for the account data center | `https://sheet.zoho.com` |
-| `ZOHO_CLIENT_ID` | Zoho OAuth client ID |  |
-| `ZOHO_CLIENT_SECRET` | Zoho OAuth client secret |  |
-| `ZOHO_REFRESH_TOKEN` | Zoho OAuth refresh token with Sheet update scope |  |
-| `ZOHO_SHEET_RESOURCE_ID` | Zoho Sheet workbook/resource ID |  |
-| `ZOHO_SHEET_WORKSHEET_NAME` | Worksheet tab that receives feedback rows | `Feedback` |
+| `ANSWER_SHORTENER_API_URL` | Answer Shortener v1 route | `http://100.100.108.43:8112/v1/answers/shorten` |
+| `ANSWER_SHORTENER_API_KEY` | Optional `X-API-Key` for the Answer Shortener API |  |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Local path to the service-account JSON key |  |
+| `GOOGLE_SHEETS_SPREADSHEET_ID` | Shared Google Spreadsheet ID |  |
+| `GOOGLE_RETRIEVAL_WORKSHEET_NAME` | Retrieval feedback tab | `Retrieval Feedback` |
+| `GOOGLE_ANSWER_SHORTENER_WORKSHEET_NAME` | Answer Shortener feedback tab | `Answer Shortener Feedback` |
 
 Client-side optional variable:
 
@@ -88,9 +88,9 @@ Client-side optional variable:
 | `VITE_DASHBOARD_PASSWORD` | Shared dashboard password used by the lightweight login gate | `change-me` |
 
 
-## Zoho Sheet feedback setup
+## Google Sheets feedback setup
 
-Create a Zoho Sheet worksheet with this header row:
+Create the `Retrieval Feedback` and `Answer Shortener Feedback` tabs in one Google Spreadsheet. Share the spreadsheet with the service account as an Editor, then set the Google Sheets variables in `server/.env`.
 
 ```text
 timestamp
@@ -111,9 +111,7 @@ all_other_fetched_questions_v2
 issue_faced
 ```
 
-Then create a Zoho OAuth app in the Zoho API Console, grant Sheet Data API update access, generate a refresh token, and put the client ID, client secret, refresh token, sheet resource ID, and worksheet name in `server/.env`.
-
-Feedback is submitted through `POST /api/feedback`; credentials are used only by the Express server and are never exposed in the browser.
+Feedback is submitted through `POST /api/feedback` for retrieval and `POST /api/answer-shortener-feedback` for Answer Shortener. The service-account key is used only by the Express server and is never exposed in the browser.
 
 ## Commands
 
@@ -138,7 +136,7 @@ Feedback is submitted through `POST /api/feedback`; credentials are used only by
 |   |-- .env.example      Public environment-variable template
 |   `-- src/
 |       |-- routes/       Search proxy and feedback routes
-|       |-- services/     FastAPI forwarding and Zoho Sheet logging
+|       |-- services/     FastAPI forwarding and Google Sheets logging
 |       `-- validation/   Search and feedback request validation
 |-- .github/workflows/    GitHub Actions verification
 `-- package.json          Root commands for the client workspace

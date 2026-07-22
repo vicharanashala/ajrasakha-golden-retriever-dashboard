@@ -2,12 +2,14 @@ import { useState } from 'react';
 import {
   AlertTriangle,
   Columns2,
+  FileText,
   History,
   Info,
   Leaf,
   Sparkles,
 } from 'lucide-react';
 import { FeedbackPanel } from './components/FeedbackPanel';
+import { AnswerShortenerTester } from './components/AnswerShortenerTester';
 import { LoginPanel } from './components/LoginPanel';
 import { LoadingState } from './components/LoadingState';
 import { ResultView } from './components/ResultView';
@@ -82,6 +84,7 @@ function App() {
   const [resultSets, setResultSets] = useState<ResultSet[]>([]);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [workspace, setWorkspace] = useState<'retrieval' | 'shortener'>('retrieval');
 
   const login = (nextTesterName: string) => {
     window.sessionStorage.setItem('golden-retrieval-tester', nextTesterName);
@@ -152,7 +155,14 @@ function App() {
         </div>
       </header>
 
-      <main className={mode === 'comparison' ? 'main--comparison' : undefined}>
+      <nav className="workspace-nav" aria-label="Dashboard tools">
+        <div className="workspace-nav__inner">
+          <button className={workspace === 'retrieval' ? 'is-active' : ''} type="button" onClick={() => setWorkspace('retrieval')}><Leaf size={16} /> Retrieval tester</button>
+          <button className={workspace === 'shortener' ? 'is-active' : ''} type="button" onClick={() => setWorkspace('shortener')}><FileText size={16} /> Answer shortener</button>
+        </div>
+      </nav>
+
+      {workspace === 'shortener' ? <main><AnswerShortenerTester testerName={testerName} /></main> : <main className={mode === 'comparison' ? 'main--comparison' : undefined}>
         <section className="mode-panel" aria-labelledby="mode-heading">
           <h2 id="mode-heading">Choose retrieval mode</h2>
           <div className="mode-selector">
@@ -248,7 +258,7 @@ function App() {
             })}
           </div>
         ) : null}
-      </main>
+      </main>}
     </div>
   );
 }
