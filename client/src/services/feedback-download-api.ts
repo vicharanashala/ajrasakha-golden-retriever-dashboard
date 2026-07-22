@@ -20,14 +20,11 @@ const getDownloadFilename = (contentDisposition: string | null) => {
 
 export const downloadFeedbackCsv = async (
   endpoint: '/api/feedback/download' | '/api/answer-shortener-feedback/download',
-  testerName: string,
 ) => {
   let response: Response;
 
   try {
-    response = await fetch(
-      `${endpoint}?tester_name=${encodeURIComponent(testerName)}`,
-    );
+    response = await fetch(endpoint);
   } catch {
     throw new FeedbackDownloadError(
       'The local dashboard server is unavailable. Please try again after confirming it is running.',

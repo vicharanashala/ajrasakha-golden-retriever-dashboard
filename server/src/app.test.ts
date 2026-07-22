@@ -49,10 +49,4 @@ describe('dashboard proxy', () => {
     expect(response.body.fieldErrors).toHaveProperty('full_answer');
   });
 
-  it('requires a tester name for feedback downloads', async () => {
-    const response = await request(app).get('/api/feedback/download');
-
-    expect(response.status).toBe(400);
-    expect(response.body.message).toContain('tester name');
-  });
 });

@@ -85,12 +85,7 @@ const escapeCsvValue = (value: unknown) => {
   return `"${safeText.replaceAll('"', '""')}"`;
 };
 
-const createDownloadFilename = (prefix: string, testerName: string) => {
-  const safeTesterName = testerName
-    .trim()
-    .replace(/[^a-z0-9]+/gi, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLocaleLowerCase();
+const createDownloadFilename = (prefix: string) => {
   const date = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
     year: 'numeric',
@@ -100,13 +95,12 @@ const createDownloadFilename = (prefix: string, testerName: string) => {
     .format(new Date())
     .replaceAll('/', '-');
 
-  return `${prefix}-feedback-${safeTesterName || 'tester'}-${date}.csv`;
+  return `${prefix}-feedback-${date}.csv`;
 };
 
-const downloadTesterFeedback = async (
+const downloadFeedback = async (
   worksheetName: string,
   filenamePrefix: string,
-  testerName: string,
 ) => {
   requiredGoogleSheetsConfig();
 
@@ -121,30 +115,13 @@ const downloadTesterFeedback = async (
       spreadsheetId: config.googleSheets.spreadsheetId,
       range: toSheetRange(worksheetName),
     });
-    const [headers = [], ...rows] = response.data.values ?? [];
-    const testerNameColumn = headers.findIndex(
-      (header) => header === 'tester_name',
-    );
-
-    if (testerNameColumn === -1) {
-      throw new GoogleSheetsError(
-        `The ${worksheetName} tab is missing a tester_name header.`,
-        502,
-      );
-    }
-
-    const normalizedTesterName = testerName.trim().toLocaleLowerCase();
-    const matchingRows = rows.filter(
-      (row) =>
-        String(row[testerNameColumn] ?? '').trim().toLocaleLowerCase() ===
-        normalizedTesterName,
-    );
-    const csv = [headers, ...matchingRows]
+    const rows = response.data.values ?? [];
+    const csv = rows
       .map((row) => row.map(escapeCsvValue).join(','))
       .join('\r\n');
 
     return {
-      filename: createDownloadFilename(filenamePrefix, testerName),
+      filename: createDownloadFilename(filenamePrefix),
       csv: `${csv}\r\n`,
     };
   } catch (error) {
@@ -197,16 +174,11 @@ export const appendAnswerShortenerFeedbackRow = async (
     feedback.issue_faced,
   ]);
 
-export const downloadRetrievalFeedback = (testerName: string) =>
-  downloadTesterFeedback(
-    config.googleSheets.retrievalWorksheetName,
-    'retrieval',
-    testerName,
-  );
+export const downloadRetrievalFeedback = () =>
+  downloadFeedback(config.googleSheets.retrievalWorksheetName, 'retrieval');
 
-export const downloadAnswerShortenerFeedback = (testerName: string) =>
-  downloadTesterFeedback(
+export const downloadAnswerShortenerFeedback = () =>
+  downloadFeedback(
     config.googleSheets.answerShortenerWorksheetName,
     'answer-shortener',
-    testerName,
   );

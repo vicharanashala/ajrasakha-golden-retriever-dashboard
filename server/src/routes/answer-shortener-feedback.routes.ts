@@ -10,18 +10,8 @@ import { answerShortenerFeedbackRequestSchema } from '../validation/answer-short
 export const answerShortenerFeedbackRouter = Router();
 
 answerShortenerFeedbackRouter.get('/download', async (request, response, next) => {
-  const testerName =
-    typeof request.query.tester_name === 'string'
-      ? request.query.tester_name.trim()
-      : '';
-
-  if (testerName.length < 2) {
-    response.status(400).json({ message: 'A tester name is required.' });
-    return;
-  }
-
   try {
-    const download = await downloadAnswerShortenerFeedback(testerName);
+    const download = await downloadAnswerShortenerFeedback();
     response
       .status(200)
       .set({

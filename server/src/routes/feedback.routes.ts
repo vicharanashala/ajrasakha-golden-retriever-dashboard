@@ -10,18 +10,8 @@ import { feedbackRequestSchema } from '../validation/feedback.schema.js';
 export const feedbackRouter = Router();
 
 feedbackRouter.get('/download', async (request, response, next) => {
-  const testerName =
-    typeof request.query.tester_name === 'string'
-      ? request.query.tester_name.trim()
-      : '';
-
-  if (testerName.length < 2) {
-    response.status(400).json({ message: 'A tester name is required.' });
-    return;
-  }
-
   try {
-    const download = await downloadRetrievalFeedback(testerName);
+    const download = await downloadRetrievalFeedback();
     response
       .status(200)
       .set({

@@ -95,11 +95,10 @@ export function AnswerShortenerFeedbackPanel({
     try {
       await downloadFeedbackCsv(
         '/api/answer-shortener-feedback/download',
-        testerName,
       );
       setStatus({
         type: 'success',
-        message: 'Your Answer Shortener feedback was downloaded.',
+        message: 'Answer Shortener feedback was downloaded.',
       });
     } catch (error) {
       setStatus({
@@ -132,7 +131,7 @@ export function AnswerShortenerFeedbackPanel({
           onClick={downloadMyFeedback}
         >
           <Download size={15} />
-          {downloading ? 'Preparing download...' : 'Download my feedback'}
+          {downloading ? 'Preparing download...' : 'Download feedback sheet'}
         </button>
 
         <form onSubmit={handleSubmit}>

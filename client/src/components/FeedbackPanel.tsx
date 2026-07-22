@@ -197,8 +197,8 @@ export function FeedbackPanel({
     setStatus(null);
 
     try {
-      await downloadFeedbackCsv('/api/feedback/download', testerName);
-      setStatus({ type: 'success', message: 'Your retrieval feedback was downloaded.' });
+      await downloadFeedbackCsv('/api/feedback/download');
+      setStatus({ type: 'success', message: 'Retrieval feedback was downloaded.' });
     } catch (error) {
       setStatus({
         type: 'error',
@@ -227,7 +227,7 @@ export function FeedbackPanel({
           onClick={downloadMyFeedback}
         >
           <Download size={15} />
-          {downloading ? 'Preparing download...' : 'Download my feedback'}
+          {downloading ? 'Preparing download...' : 'Download feedback sheet'}
         </button>
 
         <form onSubmit={handleSubmit}>
