@@ -38,3 +38,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          build-args: |
+            VITE_DASHBOARD_PASSWORD=${{ secrets.DASHBOARD_PASSWORD }}

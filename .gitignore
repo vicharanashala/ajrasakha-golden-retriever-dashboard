@@ -10,3 +10,5 @@ coverage/
 .vite/
 .idea/
 .vscode/
+deployment.yml
+deployment.fixed.yml
