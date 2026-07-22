@@ -31,6 +31,10 @@ export const config = {
     process.env.ANSWER_SHORTENER_API_URL ??
     'http://100.100.108.43:8112/v1/answers/shorten',
   answerShortenerApiKey: process.env.ANSWER_SHORTENER_API_KEY ?? '',
+  answerShortenerApiTimeoutMs: numberFromEnv(
+    process.env.ANSWER_SHORTENER_TIMEOUT_MS,
+    90_000,
+  ),
   googleSheets: {
     serviceAccount: {
       projectId: process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID ?? '',

@@ -19,7 +19,7 @@ The golden-retriever-dashboard container includes Tailscale for secure, low-late
 
 - **Single Container**: Tailscale runs in userspace networking mode inside the same container
 - **Process Management**: s6-overlay manages both tailscaled and the Node.js application
-- **SOCKS5 Proxy**: Node.js HTTP traffic to the FastAPI retrieval service is routed through Tailscale's SOCKS5 proxy
+- **SOCKS5 Proxy**: Node.js HTTP traffic to the FastAPI retrieval service **and** the Answer Shortener service is routed through Tailscale's SOCKS5 proxy
 
 ## Setup
 
@@ -45,7 +45,9 @@ Add `TAILSCALE_AUTHKEY` to your GitHub repository secrets:
 | `TS_HOSTNAME` | Hostname on tailnet | `ajrasakha-staging` |
 | `RETRIEVAL_API_V1_URL` | FastAPI v1 endpoint reachable on the tailnet | `http://100.x.x.x:8110/v1/gdb/search` |
 | `RETRIEVAL_API_V2_URL` | FastAPI v2 endpoint reachable on the tailnet | `http://100.x.x.x:8110/v2/gdb/search-combined` |
-| `LANGGRAPH_SOCKS_URL` | SOCKS5 proxy URL exposed by `tailscaled` | `socks5://127.0.0.1:1055` |
+| `ANSWER_SHORTENER_API_URL` | Answer Shortener endpoint reachable on the tailnet | `http://100.x.x.x:8112/v1/answers/shorten` |
+| `ANSWER_SHORTENER_TIMEOUT_MS` | Per-request timeout for the Answer Shortener upstream | `90000` |
+| `LANGGRAPH_SOCKS_URL` | SOCKS5 proxy URL exposed by `tailscaled` (used by both retrieval **and** answer shortener) | `socks5://127.0.0.1:1055` |
 
 ## How It Works
 
@@ -161,4 +163,4 @@ Verify:
 - Use **ephemeral auth keys** for containers that can be recreated freely
 - The auth key is passed as an environment variable, so ensure it's stored as a GitHub secret
 - Tailscale encrypts all traffic between nodes
-- Only the FastAPI retrieval traffic is routed through Tailscale; other services use normal routing
+- The FastAPI retrieval traffic **and** the Answer Shortener traffic are both routed through Tailscale; other services use normal routing
