@@ -5,6 +5,11 @@ const numberFromEnv = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+// Most hosting providers store multi-line secrets with literal `\n` sequences.
+// GoogleAuth needs real line breaks in the PEM private key.
+const privateKeyFromEnv = (value: string | undefined) =>
+  (value ?? '').replace(/\\n/g, '\n');
+
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: numberFromEnv(process.env.PORT, 4000),
@@ -27,6 +32,15 @@ export const config = {
     'http://100.100.108.43:8112/v1/answers/shorten',
   answerShortenerApiKey: process.env.ANSWER_SHORTENER_API_KEY ?? '',
   googleSheets: {
+    serviceAccount: {
+      projectId: process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID ?? '',
+      clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL ?? '',
+      privateKey: privateKeyFromEnv(
+        process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
+      ),
+    },
+    // Retained as an optional local-development fallback. Production should use
+    // the service-account variables above so no key file needs to be deployed.
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? '',
     spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID ?? '',
     retrievalWorksheetName:
