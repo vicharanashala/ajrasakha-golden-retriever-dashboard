@@ -13,9 +13,13 @@ export class GoogleSheetsError extends Error {
   }
 }
 
+const hasInlineServiceAccountCredentials = () => {
+  const { projectId, clientEmail, privateKey } = config.googleSheets.serviceAccount;
+  return Boolean(projectId && clientEmail && privateKey);
+};
+
 const requiredGoogleSheetsConfig = () => {
   const missing = [
-    ['GOOGLE_APPLICATION_CREDENTIALS', config.googleSheets.credentialsPath],
     ['GOOGLE_SHEETS_SPREADSHEET_ID', config.googleSheets.spreadsheetId],
     ['GOOGLE_RETRIEVAL_WORKSHEET_NAME', config.googleSheets.retrievalWorksheetName],
     ['GOOGLE_ANSWER_SHORTENER_WORKSHEET_NAME', config.googleSheets.answerShortenerWorksheetName],
@@ -23,12 +27,42 @@ const requiredGoogleSheetsConfig = () => {
     .filter(([, value]) => !value)
     .map(([key]) => key);
 
+  if (
+    !config.googleSheets.credentialsPath &&
+    !hasInlineServiceAccountCredentials()
+  ) {
+    missing.unshift(
+      'GOOGLE_SERVICE_ACCOUNT_PROJECT_ID, GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL, GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY (or GOOGLE_APPLICATION_CREDENTIALS for local development)',
+    );
+  }
+
   if (missing.length) {
     throw new GoogleSheetsError(
       `Google Sheets feedback is not configured. Missing: ${missing.join(', ')}.`,
       503,
     );
   }
+};
+
+const createGoogleAuth = () => {
+  const scopes = ['https://www.googleapis.com/auth/spreadsheets'];
+  const { projectId, clientEmail, privateKey } = config.googleSheets.serviceAccount;
+
+  if (hasInlineServiceAccountCredentials()) {
+    return new google.auth.GoogleAuth({
+      credentials: {
+        project_id: projectId,
+        client_email: clientEmail,
+        private_key: privateKey,
+      },
+      scopes,
+    });
+  }
+
+  return new google.auth.GoogleAuth({
+    keyFile: config.googleSheets.credentialsPath,
+    scopes,
+  });
 };
 
 const getIstTimestamp = () => {
@@ -54,10 +88,7 @@ const toSheetRange = (worksheetName: string) =>
 const appendRow = async (worksheetName: string, values: Array<string | number>) => {
   requiredGoogleSheetsConfig();
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: config.googleSheets.credentialsPath,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+  const auth = createGoogleAuth();
   const sheets = google.sheets({ version: 'v4', auth });
 
   try {
@@ -104,10 +135,7 @@ const downloadFeedback = async (
 ) => {
   requiredGoogleSheetsConfig();
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: config.googleSheets.credentialsPath,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+  const auth = createGoogleAuth();
   const sheets = google.sheets({ version: 'v4', auth });
 
   try {

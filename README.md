@@ -76,7 +76,10 @@ The dashboard runs at `http://localhost:5173`; its Express proxy runs at `http:/
 | `RETRIEVAL_API_TIMEOUT_MS` | Upstream request timeout | `90000` |
 | `ANSWER_SHORTENER_API_URL` | Answer Shortener v1 route | `http://100.100.108.43:8112/v1/answers/shorten` |
 | `ANSWER_SHORTENER_API_KEY` | Optional `X-API-Key` for the Answer Shortener API |  |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Local path to the service-account JSON key |  |
+| `GOOGLE_SERVICE_ACCOUNT_PROJECT_ID` | Google Cloud project ID from the service-account JSON |  |
+| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Service-account email from the JSON |  |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service-account private key; represent line breaks as `\n` |  |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Optional local path to the service-account JSON key |  |
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | Shared Google Spreadsheet ID |  |
 | `GOOGLE_RETRIEVAL_WORKSHEET_NAME` | Retrieval feedback tab | `Retrieval Feedback` |
 | `GOOGLE_ANSWER_SHORTENER_WORKSHEET_NAME` | Answer Shortener feedback tab | `Answer Shortener Feedback` |
@@ -91,6 +94,8 @@ Client-side optional variable:
 ## Google Sheets feedback setup
 
 Create the `Retrieval Feedback` and `Answer Shortener Feedback` tabs in one Google Spreadsheet. Share the spreadsheet with the service account as an Editor, then set the Google Sheets variables in `server/.env`.
+
+For production, store these three values from the service-account JSON as deployment secrets instead of uploading the JSON file: `GOOGLE_SERVICE_ACCOUNT_PROJECT_ID`, `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL`, and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`. Enter the private key as one value with literal `\n` line breaks (for example, `-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n`). The server converts those sequences to real line breaks before authenticating. Do not commit any real credential values. `GOOGLE_APPLICATION_CREDENTIALS` remains available only as a convenient local-file fallback.
 
 ```text
 timestamp
