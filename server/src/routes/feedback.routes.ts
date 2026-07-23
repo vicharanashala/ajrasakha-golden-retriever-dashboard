@@ -3,8 +3,8 @@ import { ZodError } from 'zod';
 import {
   appendRetrievalFeedbackRow,
   downloadRetrievalFeedback,
-  GoogleSheetsError,
-} from '../services/google-sheets.service.js';
+  ZohoSheetError,
+} from '../services/zoho-sheet.service.js';
 import { feedbackRequestSchema } from '../validation/feedback.schema.js';
 
 export const feedbackRouter = Router();
@@ -20,7 +20,7 @@ feedbackRouter.get('/download', async (request, response, next) => {
       })
       .send(download.csv);
   } catch (error) {
-    if (error instanceof GoogleSheetsError) {
+    if (error instanceof ZohoSheetError) {
       response.status(error.statusCode).json({ message: error.message });
       return;
     }
@@ -44,7 +44,7 @@ feedbackRouter.post('/', async (request, response, next) => {
       return;
     }
 
-    if (error instanceof GoogleSheetsError) {
+    if (error instanceof ZohoSheetError) {
       response.status(error.statusCode).json({ message: error.message });
       return;
     }

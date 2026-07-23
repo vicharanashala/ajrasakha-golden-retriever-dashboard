@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import type { FeedbackRequest } from '../validation/feedback.schema.js';
+import type { AnswerShortenerFeedbackRequest } from '../validation/answer-shortener-feedback.schema.js';
 
 export class ZohoSheetError extends Error {
   constructor(
@@ -17,7 +18,6 @@ const requiredZohoConfig = () => {
     ['ZOHO_CLIENT_SECRET', config.zoho.clientSecret],
     ['ZOHO_REFRESH_TOKEN', config.zoho.refreshToken],
     ['ZOHO_SHEET_RESOURCE_ID', config.zoho.sheetResourceId],
-    ['ZOHO_SHEET_WORKSHEET_NAME', config.zoho.worksheetName],
   ]
     .filter(([, value]) => !value)
     .map(([key]) => key);
@@ -30,8 +30,8 @@ const requiredZohoConfig = () => {
   }
 };
 
-const getIstTimestamp = () =>
-  new Intl.DateTimeFormat('en-IN', {
+const getIstTimestamp = () => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Kolkata',
     year: 'numeric',
     month: '2-digit',
@@ -39,8 +39,13 @@ const getIstTimestamp = () =>
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
-  }).format(new Date());
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const valueFor = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+
+  return `${valueFor('year')}-${valueFor('month')}-${valueFor('day')} ${valueFor('hour')}:${valueFor('minute')}:${valueFor('second')} IST`;
+};
 
 const getZohoAccessToken = async () => {
   requiredZohoConfig();
@@ -76,18 +81,20 @@ const getZohoAccessToken = async () => {
   return responseBody.access_token;
 };
 
-export const appendFeedbackRow = async (feedback: FeedbackRequest) => {
-  const accessToken = await getZohoAccessToken();
-  const row = {
-    timestamp: getIstTimestamp(),
-    ...feedback,
-  };
+type ZohoResponse = {
+  status?: unknown;
+  error_code?: unknown;
+  error_message?: unknown;
+  message?: unknown;
+  records?: unknown;
+};
 
+const callZohoSheet = async (
+  accessToken: string,
+  parameters: Record<string, string>,
+) => {
   const body = new URLSearchParams({
-    method: 'worksheet.records.add',
-    worksheet_name: config.zoho.worksheetName,
-    header_row: '1',
-    json_data: JSON.stringify([row]),
+    ...parameters,
   });
 
   const response = await fetch(
@@ -102,22 +109,161 @@ export const appendFeedbackRow = async (feedback: FeedbackRequest) => {
     },
   );
 
-  const responseBody = (await response.json().catch(() => ({}))) as {
-    status?: unknown;
-    error_message?: unknown;
-    message?: unknown;
-  };
+  const responseBody = (await response.json().catch(() => ({}))) as ZohoResponse;
 
-  if (!response.ok || responseBody.status === 'failure') {
+  const hasZohoError =
+    responseBody.status === 'failure' ||
+    typeof responseBody.error_code === 'number' ||
+    (typeof responseBody.error_message === 'string' &&
+      responseBody.status !== 'success');
+
+  if (!response.ok || hasZohoError) {
     const message =
       typeof responseBody.error_message === 'string'
         ? responseBody.error_message
         : typeof responseBody.message === 'string'
           ? responseBody.message
-          : 'Zoho Sheet rejected the feedback row.';
+          : 'Zoho Sheet rejected the request.';
 
     throw new ZohoSheetError(message);
   }
 
-  return row;
+  return responseBody;
 };
+
+type FeedbackRow = Record<string, string | number>;
+
+const appendRow = async (worksheetName: string, row: FeedbackRow) => {
+  const accessToken = await getZohoAccessToken();
+  await callZohoSheet(accessToken, {
+    method: 'worksheet.records.add',
+    worksheet_name: worksheetName,
+    header_row: '1',
+    json_data: JSON.stringify([row]),
+  });
+};
+
+const escapeCsvValue = (value: unknown) => {
+  const text = String(value ?? '');
+  const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safeText.replaceAll('"', '""')}"`;
+};
+
+const createDownloadFilename = (prefix: string) => {
+  const date = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(new Date())
+    .replaceAll('/', '-');
+
+  return `${prefix}-feedback-${date}.csv`;
+};
+
+const fetchRows = async (worksheetName: string) => {
+  const accessToken = await getZohoAccessToken();
+  const rows: Record<string, unknown>[] = [];
+  const batchSize = 1_000;
+
+  for (let recordsStartIndex = 1; ; recordsStartIndex += batchSize) {
+    const response = await callZohoSheet(accessToken, {
+      method: 'worksheet.records.fetch',
+      worksheet_name: worksheetName,
+      header_row: '1',
+      records_start_index: String(recordsStartIndex),
+      count: String(batchSize),
+    });
+    const batch = Array.isArray(response.records)
+      ? response.records.filter(
+          (record): record is Record<string, unknown> =>
+            typeof record === 'object' && record !== null,
+        )
+      : [];
+
+    rows.push(...batch);
+    if (batch.length < batchSize) return rows;
+  }
+};
+
+const downloadFeedback = async (
+  worksheetName: string,
+  headers: readonly string[],
+  filenamePrefix: string,
+) => {
+  const rows = await fetchRows(worksheetName);
+  const csvRows = [
+    headers,
+    ...rows.map((row) => headers.map((header) => row[header] ?? '')),
+  ];
+
+  return {
+    filename: createDownloadFilename(filenamePrefix),
+    csv: `${csvRows.map((row) => row.map(escapeCsvValue).join(',')).join('\r\n')}\r\n`,
+  };
+};
+
+const retrievalHeaders = [
+  'timestamp',
+  'tester_name',
+  'input_question',
+  'state',
+  'crop',
+  'retrieved_question_api_v1',
+  'retrieved_question_api_v2',
+  'retrieved_answer_with_sources_v1',
+  'retrieved_answer_with_sources_v2',
+  'question_id_v1',
+  'question_id_v2',
+  'similarity_score',
+  'retrieval_source',
+  'all_other_fetched_questions_v1',
+  'all_other_fetched_questions_v2',
+  'issue_faced',
+] as const;
+
+const answerShortenerHeaders = [
+  'timestamp',
+  'tester_name',
+  'original_query',
+  'expected_number_of_characters',
+  'full_answer',
+  'short_answer',
+  'original_character_count',
+  'expected_character_count',
+  'min_character_count',
+  'max_character_count',
+  'actual_character_count',
+  'footer_character_count',
+  'tolerance',
+  'issue_faced',
+] as const;
+
+export const appendRetrievalFeedbackRow = async (feedback: FeedbackRequest) =>
+  appendRow(config.zoho.retrievalWorksheetName, {
+    timestamp: getIstTimestamp(),
+    ...feedback,
+  });
+
+export const appendAnswerShortenerFeedbackRow = async (
+  feedback: AnswerShortenerFeedbackRequest,
+) =>
+  appendRow(config.zoho.answerShortenerWorksheetName, {
+    timestamp: getIstTimestamp(),
+    ...feedback,
+  });
+
+export const downloadRetrievalFeedback = () =>
+  downloadFeedback(
+    config.zoho.retrievalWorksheetName,
+    retrievalHeaders,
+    'retrieval',
+  );
+
+export const downloadAnswerShortenerFeedback = () =>
+  downloadFeedback(
+    config.zoho.answerShortenerWorksheetName,
+    answerShortenerHeaders,
+    'answer-shortener',
+  );
