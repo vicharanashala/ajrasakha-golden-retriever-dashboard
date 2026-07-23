@@ -39,7 +39,7 @@ describe('dashboard proxy', () => {
     expect(response.body.fieldErrors).toHaveProperty('expected_character_count');
   });
 
-  it('rejects incomplete answer-shortener feedback before calling Google Sheets', async () => {
+  it('rejects incomplete answer-shortener feedback before calling Zoho Sheet', async () => {
     const response = await request(app)
       .post('/api/answer-shortener-feedback')
       .send({ tester_name: 'Tester', original_query: 'Query' });

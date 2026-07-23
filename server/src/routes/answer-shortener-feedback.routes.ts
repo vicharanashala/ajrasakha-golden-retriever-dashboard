@@ -3,8 +3,8 @@ import { ZodError } from 'zod';
 import {
   appendAnswerShortenerFeedbackRow,
   downloadAnswerShortenerFeedback,
-  GoogleSheetsError,
-} from '../services/google-sheets.service.js';
+  ZohoSheetError,
+} from '../services/zoho-sheet.service.js';
 import { answerShortenerFeedbackRequestSchema } from '../validation/answer-shortener-feedback.schema.js';
 
 export const answerShortenerFeedbackRouter = Router();
@@ -20,7 +20,7 @@ answerShortenerFeedbackRouter.get('/download', async (request, response, next) =
       })
       .send(download.csv);
   } catch (error) {
-    if (error instanceof GoogleSheetsError) {
+    if (error instanceof ZohoSheetError) {
       response.status(error.statusCode).json({ message: error.message });
       return;
     }
@@ -43,7 +43,7 @@ answerShortenerFeedbackRouter.post('/', async (request, response, next) => {
       return;
     }
 
-    if (error instanceof GoogleSheetsError) {
+    if (error instanceof ZohoSheetError) {
       response.status(error.statusCode).json({ message: error.message });
       return;
     }

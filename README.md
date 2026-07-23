@@ -13,7 +13,7 @@ The React client calls a small Express proxy, which forwards requests to the Fas
 - Per-question retrieval sources with multi-source deduplication
 - Expandable answers, sources, classifications, and relevance reasons
 - Tester login gate for capturing evaluator name
-- Retrieval and Answer Shortener feedback stored in separate Google Spreadsheet tabs
+- Retrieval and Answer Shortener feedback stored in separate Zoho Sheet worksheets
 - Complete state and Union Territory selector
 - Independent v1 and v2 failure reporting
 - Answer Shortener API test page with full/short answer, character counts, and tolerance review
@@ -47,7 +47,7 @@ The React client calls a small Express proxy, which forwards requests to the Fas
 
 3. Set the v1 and v2 retrieval FastAPI route URLs in `server/.env`. The Answer Shortener URL defaults to `http://100.100.108.43:8112/v1/answers/shorten`; if its `X-API-Key` protection is enabled, set `ANSWER_SHORTENER_API_KEY` too.
 
-4. If feedback logging is required, configure the Google Sheets variables in `server/.env`.
+4. If feedback logging is required, configure the Zoho Sheet variables in `server/.env` and create the Answer Shortener worksheet described below.
 
 5. Optionally set a shared dashboard password for local builds in `client/.env.local`:
 
@@ -76,13 +76,14 @@ The dashboard runs at `http://localhost:5173`; its Express proxy runs at `http:/
 | `RETRIEVAL_API_TIMEOUT_MS` | Upstream request timeout | `90000` |
 | `ANSWER_SHORTENER_API_URL` | Answer Shortener v1 route | `http://100.100.108.43:8112/v1/answers/shorten` |
 | `ANSWER_SHORTENER_API_KEY` | Optional `X-API-Key` for the Answer Shortener API |  |
-| `GOOGLE_SERVICE_ACCOUNT_PROJECT_ID` | Google Cloud project ID from the service-account JSON |  |
-| `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL` | Service-account email from the JSON |  |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service-account private key; represent line breaks as `\n` |  |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Optional local path to the service-account JSON key |  |
-| `GOOGLE_SHEETS_SPREADSHEET_ID` | Shared Google Spreadsheet ID |  |
-| `GOOGLE_RETRIEVAL_WORKSHEET_NAME` | Retrieval feedback tab | `Retrieval Feedback` |
-| `GOOGLE_ANSWER_SHORTENER_WORKSHEET_NAME` | Answer Shortener feedback tab | `Answer Shortener Feedback` |
+| `ZOHO_ACCOUNTS_URL` | Zoho Accounts domain for the OAuth token exchange | `https://accounts.zoho.in` |
+| `ZOHO_SHEET_API_BASE` | Zoho Sheet API domain | `https://sheet.zoho.in` |
+| `ZOHO_CLIENT_ID` | Zoho OAuth client ID |  |
+| `ZOHO_CLIENT_SECRET` | Zoho OAuth client secret |  |
+| `ZOHO_REFRESH_TOKEN` | Zoho OAuth refresh token |  |
+| `ZOHO_SHEET_RESOURCE_ID` | Existing Zoho workbook resource ID |  |
+| `ZOHO_RETRIEVAL_WORKSHEET_NAME` | Retrieval feedback worksheet | `Feedback` |
+| `ZOHO_ANSWER_SHORTENER_WORKSHEET_NAME` | Answer Shortener feedback worksheet | `Answer Shortener Feedback` |
 
 Client-side optional variable:
 
@@ -91,11 +92,13 @@ Client-side optional variable:
 | `VITE_DASHBOARD_PASSWORD` | Shared dashboard password used by the lightweight login gate | `change-me` |
 
 
-## Google Sheets feedback setup
+## Zoho Sheet feedback setup
 
-Create the `Retrieval Feedback` and `Answer Shortener Feedback` tabs in one Google Spreadsheet. Share the spreadsheet with the service account as an Editor, then set the Google Sheets variables in `server/.env`.
+Use the existing Zoho workbook identified by `ZOHO_SHEET_RESOURCE_ID`. Keep the existing `Feedback` worksheet for retrieval feedback, then create a second worksheet named `Answer Shortener Feedback` (or set `ZOHO_ANSWER_SHORTENER_WORKSHEET_NAME` to the name you choose). Put the exact column headers below in row 1. The application adds records by matching these header names.
 
-For production, store these three values from the service-account JSON as deployment secrets instead of uploading the JSON file: `GOOGLE_SERVICE_ACCOUNT_PROJECT_ID`, `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL`, and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`. Enter the private key as one value with literal `\n` line breaks (for example, `-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n`). The server converts those sequences to real line breaks before authenticating. Do not commit any real credential values. `GOOGLE_APPLICATION_CREDENTIALS` remains available only as a convenient local-file fallback.
+The OAuth refresh token must have `ZohoSheet.dataAPI.READ` and `ZohoSheet.dataAPI.UPDATE` scopes. Zoho credentials remain only on the Express server and are never exposed in the browser.
+
+### Retrieval feedback headers
 
 ```text
 timestamp
@@ -116,7 +119,26 @@ all_other_fetched_questions_v2
 issue_faced
 ```
 
-Feedback is submitted through `POST /api/feedback` for retrieval and `POST /api/answer-shortener-feedback` for Answer Shortener. The service-account key is used only by the Express server and is never exposed in the browser.
+### Answer Shortener feedback headers
+
+```text
+timestamp
+tester_name
+original_query
+expected_number_of_characters
+full_answer
+short_answer
+original_character_count
+expected_character_count
+min_character_count
+max_character_count
+actual_character_count
+footer_character_count
+tolerance
+issue_faced
+```
+
+Feedback is submitted through `POST /api/feedback` for retrieval and `POST /api/answer-shortener-feedback` for Answer Shortener. The existing download buttons call the matching `/download` endpoint and return that worksheet as a CSV file.
 
 ## Commands
 
@@ -141,7 +163,7 @@ Feedback is submitted through `POST /api/feedback` for retrieval and `POST /api/
 |   |-- .env.example      Public environment-variable template
 |   `-- src/
 |       |-- routes/       Search proxy and feedback routes
-|       |-- services/     FastAPI forwarding and Google Sheets logging
+|       |-- services/     FastAPI forwarding and Zoho Sheet logging
 |       `-- validation/   Search and feedback request validation
 |-- .github/workflows/    GitHub Actions verification
 `-- package.json          Root commands for the client workspace
